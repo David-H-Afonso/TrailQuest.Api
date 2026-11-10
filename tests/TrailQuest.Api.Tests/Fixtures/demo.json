@@ -1,0 +1,15 @@
+{
+  "steps":[1100,2300,1600,0,2100,2800,3800],
+  "journeys":["tokyo","mistvale","hokkaido"],
+  "activities":[
+    {"id":"test-strength-1","name":"Synthetic strength A","sport":"strength_training","offsetDays":-4,"durationSeconds":1800,"distanceMeters":null,"caloriesKcal":200,"averageHeartRate":110,"repetitions":120,"sets":12,"volumeKg":3200,"exercises":[],"track":[]},
+    {"id":"test-strength-2","name":"Synthetic strength B","sport":"strength_training","offsetDays":-2,"durationSeconds":2100,"distanceMeters":null,"caloriesKcal":250,"averageHeartRate":115,"repetitions":136,"sets":14,"volumeKg":4100,"exercises":[],"track":[]},
+    {"id":"test-walk","name":"Synthetic walk","sport":"walking","offsetDays":-1,"durationSeconds":1200,"distanceMeters":2000,"caloriesKcal":100,"averageHeartRate":90,"repetitions":null,"sets":null,"volumeKg":null,"exercises":[],"track":[{"latitude":28.45,"longitude":-16.25},{"latitude":28.46,"longitude":-16.24}]},
+    {"id":"test-strength-3","name":"Synthetic strength C","sport":"strength_training","offsetDays":0,"durationSeconds":1500,"distanceMeters":null,"caloriesKcal":180,"averageHeartRate":105,"repetitions":80,"sets":8,"volumeKg":1800,"exercises":[],"track":[]}
+  ],
+  "health":[
+    {"dataset":"sleep","offsetDays":0,"payload":{"calendarDate":"@DATE","sleepTimeSeconds":26640}},
+    {"dataset":"heart-rate","offsetDays":0,"payload":{"calendarDate":"@DATE","restingHeartRate":58,"heartRateValues":[["@DATET08:00:00Z",65],["@DATET09:00:00Z",75]]}}
+  ],
+  "posts":[{"author":"Synthetic traveler","kind":"checkpoint","title":"Synthetic stamp","summary":"Test-only data, not a production fallback."}]
+}

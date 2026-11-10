@@ -1,0 +1,23 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "title":"TrailQuest adventure pack v1",
+  "type":"object",
+  "required":["schemaVersion","contentVersion","id","name","subtitle","region","kind","setting","difficulty","distanceKm","description","introduction","color","passport","map","coordinates","checkpoints","gallery","references","attribution"],
+  "additionalProperties":false,
+  "properties":{
+    "schemaVersion":{"const":1},"contentVersion":{"type":"string","pattern":"^[0-9]+\\.[0-9]+\\.[0-9]+$"},"isDefault":{"type":"boolean"},
+    "id":{"type":"string","pattern":"^[a-z0-9][a-z0-9-]{0,63}$"},"name":{"type":"string","minLength":1},"subtitle":{"type":"string"},"region":{"type":"string"},
+    "kind":{"enum":["city","fantasy"]},"setting":{"enum":["real","fiction"]},"difficulty":{"type":"string"},"distanceKm":{"type":"number","exclusiveMinimum":0},"description":{"type":"string"},"introduction":{"type":"string"},
+    "color":{"type":"string","pattern":"^#[0-9a-fA-F]{6}$"},"cover":{"$ref":"#/$defs/asset"},
+    "passport":{"type":"object","required":["title","subtitle","regionLabel","color","motif","closingText"],"additionalProperties":false,"properties":{"title":{"type":"string"},"subtitle":{"type":"string"},"regionLabel":{"type":"string"},"color":{"type":"string","pattern":"^#[0-9a-fA-F]{6}$"},"motif":{"type":"string"},"closingText":{"type":"string"}}},
+    "map":{"type":"object","required":["kind","label"],"additionalProperties":false,"properties":{"kind":{"enum":["geographic","illustrated","schematic"]},"artwork":{"$ref":"#/$defs/asset"},"label":{"type":"string"}}},
+    "coordinates":{"type":"array","minItems":2,"items":{"$ref":"#/$defs/point"}},
+    "checkpoints":{"type":"array","minItems":2,"items":{"type":"object","required":["id","name","localName","distanceKm","position","category","description","fact","story","stamp","gallery"],"additionalProperties":false,"properties":{"id":{"type":"string","pattern":"^[a-z0-9-]+$"},"name":{"type":"string"},"localName":{"type":"string"},"distanceKm":{"type":"number","minimum":0},"position":{"$ref":"#/$defs/point"},"category":{"type":"string"},"description":{"type":"string"},"fact":{"type":"string"},"story":{"type":"array","items":{"type":"string"}},"stamp":{"type":"string"},"image":{"$ref":"#/$defs/asset"},"gallery":{"type":"array","items":{"$ref":"#/$defs/media"}}}}},
+    "gallery":{"type":"array","items":{"$ref":"#/$defs/media"}},"references":{"type":"array","items":{"type":"object","required":["title","url"],"additionalProperties":false,"properties":{"title":{"type":"string"},"url":{"type":"string","format":"uri","pattern":"^https://"}}}},"attribution":{"type":"string"}
+  },
+  "$defs":{
+    "asset":{"type":"string","pattern":"^[a-zA-Z0-9_-]+\\.(svg|webp|jpg|jpeg|png)$"},
+    "point":{"type":"array","minItems":2,"maxItems":2,"items":{"type":"number"}},
+    "media":{"type":"object","required":["file","alt","caption","credit","license"],"additionalProperties":false,"properties":{"file":{"$ref":"#/$defs/asset"},"alt":{"type":"string","minLength":1},"caption":{"type":"string"},"credit":{"type":"string","minLength":1},"license":{"type":"string","minLength":1},"sourceUrl":{"type":"string","format":"uri","pattern":"^https://"},"licenseUrl":{"type":"string","format":"uri","pattern":"^https://"}}}
+  }
+}

@@ -1,0 +1,25 @@
+{
+ "steps":[1100,2300,1600,0,2100,2800,3800],
+ "journeys":["tokyo","mistvale","hokkaido"],
+ "activities":[
+  {"id":"strength-1","name":"Fuerza · tren superior","sport":"strength_training","offsetDays":-4,"durationSeconds":2820,"distanceMeters":null,"caloriesKcal":280,"averageHeartRate":112,"repetitions":120,"sets":12,"volumeKg":3200,"exercises":[{"name":"Press de banca","sets":4,"repetitions":40,"maxWeightKg":40,"volumeKg":1600},{"name":"Remo","sets":4,"repetitions":40,"maxWeightKg":30,"volumeKg":1200},{"name":"Curl","sets":4,"repetitions":40,"maxWeightKg":10,"volumeKg":400}],"track":[]},
+  {"id":"strength-2","name":"Fuerza · piernas y estabilidad","sport":"strength_training","offsetDays":-2,"durationSeconds":3150,"distanceMeters":null,"caloriesKcal":330,"averageHeartRate":118,"repetitions":136,"sets":14,"volumeKg":4100,"exercises":[{"name":"Sentadilla","sets":5,"repetitions":50,"maxWeightKg":50,"volumeKg":2500},{"name":"Peso muerto rumano","sets":4,"repetitions":40,"maxWeightKg":40,"volumeKg":1600},{"name":"Ejercicio corporal","sets":5,"repetitions":46,"maxWeightKg":null,"volumeKg":null}],"track":[]},
+  {"id":"walk-1","name":"Paseo de tarde · recorrido ficticio","sport":"walking","offsetDays":-1,"durationSeconds":2160,"distanceMeters":2800,"caloriesKcal":145,"averageHeartRate":96,"repetitions":null,"sets":null,"volumeKg":null,"exercises":[],"track":[{"latitude":35.6813,"longitude":139.7671},{"latitude":35.6828,"longitude":139.7655},{"latitude":35.685,"longitude":139.762},{"latitude":35.688,"longitude":139.761},{"latitude":35.691,"longitude":139.7625},{"latitude":35.694,"longitude":139.764}]},
+  {"id":"strength-3","name":"Fuerza · sesión breve","sport":"strength_training","offsetDays":0,"durationSeconds":1800,"distanceMeters":null,"caloriesKcal":190,"averageHeartRate":109,"repetitions":80,"sets":8,"volumeKg":1800,"exercises":[{"name":"Press con mancuernas","sets":4,"repetitions":40,"maxWeightKg":20,"volumeKg":800},{"name":"Remo","sets":4,"repetitions":40,"maxWeightKg":25,"volumeKg":1000}],"track":[]}
+ ],
+ "health":[
+  {"dataset":"daily-summary","offsetDays":0,"payload":{"calendarDate":"@DATE","totalKilocalories":2210,"activeKilocalories":430,"bmrKilocalories":1780,"restingHeartRate":58,"averageStressLevel":27,"moderateIntensityMinutes":24,"vigorousIntensityMinutes":8}},
+  {"dataset":"daily-summary","offsetDays":-1,"payload":{"calendarDate":"@DATE","totalKilocalories":2050,"activeKilocalories":280,"restingHeartRate":60,"averageStressLevel":33}},
+  {"dataset":"daily-summary","offsetDays":-2,"payload":{"calendarDate":"@DATE","totalKilocalories":2350,"activeKilocalories":540,"restingHeartRate":57,"averageStressLevel":24}},
+  {"dataset":"sleep","offsetDays":0,"payload":{"calendarDate":"@DATE","sleepTimeSeconds":26640,"deepSleepSeconds":5100,"lightSleepSeconds":14580,"remSleepSeconds":6960,"awakeSleepSeconds":900,"sleepScores":{"overall":{"value":82}},"avgHeartRate":56}},
+  {"dataset":"sleep","offsetDays":-1,"payload":{"calendarDate":"@DATE","sleepTimeSeconds":25200,"deepSleepSeconds":4800,"lightSleepSeconds":14400,"remSleepSeconds":6000,"awakeSleepSeconds":1200,"sleepScores":{"overall":{"value":76}}}},
+  {"dataset":"heart-rate","offsetDays":0,"payload":{"calendarDate":"@DATE","restingHeartRate":58,"minHeartRate":48,"maxHeartRate":142,"heartRateValues":[["@DATET08:00:00Z",63],["@DATET09:00:00Z",70],["@DATET10:00:00Z",67],["@DATET11:00:00Z",82],["@DATET12:00:00Z",76],["@DATET13:00:00Z",79],["@DATET14:00:00Z",72],["@DATET15:00:00Z",88],["@DATET16:00:00Z",115],["@DATET17:00:00Z",104],["@DATET18:00:00Z",75],["@DATET19:00:00Z",68]]}},
+  {"dataset":"body-battery","offsetDays":0,"payload":{"date":"@DATE","charged":62,"drained":49,"bodyBatteryValueDescriptorDTOList":[{"bodyBatteryValueDescriptorIndex":0,"bodyBatteryValueDescriptorKey":"timestamp"},{"bodyBatteryValueDescriptorIndex":1,"bodyBatteryValueDescriptorKey":"bodyBatteryLevel"}],"bodyBatteryValuesArray":[["@DATET08:00:00Z",83],["@DATET10:00:00Z",75],["@DATET12:00:00Z",66],["@DATET14:00:00Z",58],["@DATET16:00:00Z",45],["@DATET18:00:00Z",37],["@DATET20:00:00Z",34]]}},
+  {"dataset":"hrv","offsetDays":0,"payload":{"calendarDate":"@DATE","hrvSummary":{"lastNightAvg":48,"weeklyAvg":46},"hrvReadings":[{"hrvValue":45,"readingTimeGMT":"@DATET02:00:00"},{"hrvValue":52,"readingTimeGMT":"@DATET03:00:00"},{"hrvValue":47,"readingTimeGMT":"@DATET04:00:00"},{"hrvValue":50,"readingTimeGMT":"@DATET05:00:00"}]}},
+  {"dataset":"hydration","offsetDays":0,"payload":{"calendarDate":"@DATE","valueInML":1850,"goalInML":2200}}
+ ],
+ "posts":[
+  {"author":"Viajera de ejemplo","kind":"checkpoint","title":"Una luz en el bosque","summary":"Ha descubierto una nueva página de su pasaporte. Publicación ficticia: no representa otra cuenta real."},
+  {"author":"Compañero de ejemplo","kind":"activity","title":"Una sesión más en el taller","summary":"Ha completado una sesión de fuerza. En el feed real solo aparecerá lo que tus amistades decidan publicar."}
+ ]
+}

@@ -1,0 +1,91 @@
+name: trailquest
+services:
+  trailquest-api:
+    image: ${TRAILQUEST_API_IMAGE:?Set the API image tag or digest}
+    restart: unless-stopped
+    init: true
+    user: "${TRAILQUEST_UID:-1654}:${TRAILQUEST_GID:-1654}"
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 128
+    stop_grace_period: 30s
+    tmpfs: ["/tmp:rw,noexec,nosuid,size=67108864"]
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_HTTP_PORTS: "8080"
+      Data__Directory: /data
+      Security__KeyDirectory: /security
+      Hosting__AllowRemote: "true"
+      Hosting__PublicOrigin: https://${TRAILQUEST_PUBLIC_HOST:?Set the public HTTPS hostname}:${TRAILQUEST_PUBLIC_HTTPS_PORT:-443}
+      Hosting__KnownProxies__0: ${TRAILQUEST_WEB_IP:?Set the exact web-container IP}
+      Demo__Enabled: ${TRAILQUEST_DEMO_ENABLED:-false}
+      TZ: ${TRAILQUEST_TIME_ZONE:-Etc/UTC}
+      Logging__LogLevel__Microsoft.AspNetCore: Warning
+      Logging__LogLevel__Microsoft.EntityFrameworkCore: Warning
+    volumes:
+      - type: bind
+        source: ${TRAILQUEST_DATA_DIR:?Set the persistent database directory}
+        target: /data
+        bind: {create_host_path: false}
+      - type: bind
+        source: ${TRAILQUEST_SECURITY_DIR:?Set the private persistent key directory}
+        target: /security
+        bind: {create_host_path: false}
+    networks:
+      application:
+        ipv4_address: ${TRAILQUEST_API_IP:?Set the API-container IP}
+
+  trailquest-web:
+    image: ${TRAILQUEST_WEB_IMAGE:?Set the web image tag or digest}
+    restart: unless-stopped
+    init: true
+    user: "101:101"
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 64
+    tmpfs: ["/tmp:rw,noexec,nosuid,size=33554432"]
+    depends_on:
+      trailquest-api: {condition: service_healthy}
+    environment:
+      TRAILQUEST_API_UPSTREAM: trailquest-api:8080
+      TRAILQUEST_TRUSTED_FORWARDER: ${TRAILQUEST_TRUSTED_PROXY:?Set the exact immediate HTTPS proxy IP}
+    ports:
+      - target: 8080
+        published: "${TRAILQUEST_HTTP_PORT:-5223}"
+        host_ip: ${TRAILQUEST_BIND_ADDRESS:-127.0.0.1}
+        protocol: tcp
+    networks:
+      application:
+        ipv4_address: ${TRAILQUEST_WEB_IP:?Set the web-container IP}
+    x-casaos:
+      ports:
+        - container: "8080"
+          description:
+            en_us: Private HTTP upstream for your HTTPS reverse proxy.
+            es_es: Puerto HTTP privado para tu proxy HTTPS.
+
+networks:
+  application:
+    ipam:
+      config:
+        - subnet: ${TRAILQUEST_SUBNET:?Choose an unused private Docker subnet}
+
+x-casaos:
+  architectures: [amd64]
+  main: trailquest-web
+  category: Health
+  title: {en_us: TrailQuest}
+  tagline:
+    en_us: Private activity archive and walking adventures
+    es_es: Archivo privado de actividad y aventuras a pie
+  description:
+    en_us: Configure HTTPS, proxy trust and both persistent volumes. Create the owner from the private API console. No default accounts or passwords.
+    es_es: Configura HTTPS, el proxy y los dos volúmenes persistentes. Crea el propietario desde la consola privada de la API. Sin usuarios ni contraseñas predefinidos.
+  hostname: ${TRAILQUEST_PUBLIC_HOST:?Set the public HTTPS hostname}
+  port_map: "${TRAILQUEST_PUBLIC_HTTPS_PORT:-443}"
+  scheme: https
+  index: /
+  icon: https://${TRAILQUEST_PUBLIC_HOST}:${TRAILQUEST_PUBLIC_HTTPS_PORT:-443}/favicon.svg
+  version: "1.0.0"

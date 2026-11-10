@@ -1,0 +1,5 @@
+[
+ {"id":"truck","name":"El peso de un camión","description":"Reúne 10.000 kg de volumen de fuerza, sesión a sesión.","metric":"strength-volume","unit":"kg","target":10000,"comparisonNote":"Referencia narrativa de 10 toneladas. Volumen = repeticiones × carga; no significa levantar un camión de una vez ni mide trabajo mecánico."},
+ {"id":"hero","name":"El archivo del héroe","description":"Acumula 500 repeticiones de fuerza realmente registradas, sin plazo ni rachas.","metric":"strength-repetitions","unit":"repeticiones","target":500,"comparisonNote":"Una fantasía de constancia, no una prescripción de entrenamiento. Las instrucciones planificadas no cuentan como repeticiones realizadas."},
+ {"id":"workshop","name":"Diez visitas al taller","description":"Completa diez sesiones de fuerza a tu ritmo.","metric":"strength-sessions","unit":"sesiones","target":10,"comparisonNote":"Cada actividad cuenta una sola vez. Descansar no elimina tu progreso."}
+]

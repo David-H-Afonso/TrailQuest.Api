@@ -1,0 +1,28 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TrailQuest.Api", "TrailQuest.Api.csproj", "{B25378C9-9055-456A-BBDE-0B000BCC5E6E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TrailQuest.Api.Tests", "tests\TrailQuest.Api.Tests\TrailQuest.Api.Tests.csproj", "{A40B9BB4-918C-43CC-9473-20746F83A2D2}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{B25378C9-9055-456A-BBDE-0B000BCC5E6E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B25378C9-9055-456A-BBDE-0B000BCC5E6E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B25378C9-9055-456A-BBDE-0B000BCC5E6E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B25378C9-9055-456A-BBDE-0B000BCC5E6E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A40B9BB4-918C-43CC-9473-20746F83A2D2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A40B9BB4-918C-43CC-9473-20746F83A2D2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A40B9BB4-918C-43CC-9473-20746F83A2D2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A40B9BB4-918C-43CC-9473-20746F83A2D2}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
