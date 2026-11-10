@@ -10,9 +10,17 @@ The API listens privately on 8080, without a host port. Nginx Web serves the SPA
 
 Requirements: Linux amd64, Docker Engine/Compose v2, an HTTPS origin/certificate and a reverse proxy you administer. The initial candidate was verified on an isolated local Docker engine; actual CasaOS DNS/TLS/firewall remain operator checks. ARM64 base availability is not an application verification claim; the descriptor advertises amd64 only.
 
+## Published images
+
+Each component repository's push to `main`/`master` verifies, builds, scans and publishes its own GHCR image. After both workflows succeed, the installation examples use `ghcr.io/david-h-afonso/trailquest-api:latest` and `ghcr.io/david-h-afonso/trailquest-web:latest`. No local compilation or application secret is needed to pull them. Forks publish under their own lower-case owner.
+
+In GitHub **Packages → package → Package settings**, select **Public** for anonymous CasaOS pulls, or authenticate the Docker host for private packages. Public repository visibility does not by itself guarantee anonymous package access. If publication returns a permission error, check Actions' package-write permission and the package's repository/Actions access; the workflows use the built-in `GITHUB_TOKEN`, not a stored personal token.
+
+Use the workflow summary's `sha-<full-commit>` tag or `@sha256:…` digest to pin a tested API/web pair. `latest` follows the default branch and is not immutable; numbered images appear only after pushing the matching `v<VERSION>` release tag. Keep the paired previous digests and make the agreed data/protection backup before updating. Actions never contact or deploy to your CasaOS server.
+
 ## Configure before starting
 
-1. Copy `deploy/.env.example` to an ignored `deploy/.env`. Replace image references with your own GHCR tags/digests; do not assume `latest` is immutable.
+1. Copy `deploy/.env.example` to an ignored `deploy/.env`. Choose the published API/web references, preferably the tested immutable digests; do not assume `latest` is immutable.
 2. Set public hostname/HTTPS port, the private bind interface/HTTP port, timezone, unused Docker subnet and service IPs. The CasaOS launcher uses the **public HTTPS address**, not HTTPS on the internal HTTP port.
 3. Configure the exact immediate proxy peer seen by Web. NAT may make it different from the proxy container's own address. Never accept a CIDR/wildcard, every proxy, or client-supplied forwarding headers. Restrict the host HTTP port to the real reverse proxy with the host firewall/network policy.
 4. Create two private host directories for `/data` and `/security`, owned by the configured API UID/GID. With the example's defaults, a human administrator can use:

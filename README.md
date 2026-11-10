@@ -38,7 +38,7 @@ Copy `deploy/.env.example` to a private, ignored `.env` next to Compose and fill
 
 | Names | Purpose |
 | --- | --- |
-| `TRAILQUEST_API_IMAGE`, `TRAILQUEST_WEB_IMAGE` | The paired immutable image tags/digests |
+| `TRAILQUEST_API_IMAGE`, `TRAILQUEST_WEB_IMAGE` | Published API/web image references; use release tags or digests for a pinned installation |
 | `TRAILQUEST_PUBLIC_HOST`, `TRAILQUEST_PUBLIC_HTTPS_PORT` | External HTTPS address; also used by the CasaOS launcher |
 | `TRAILQUEST_BIND_ADDRESS`, `TRAILQUEST_HTTP_PORT` | Private host interface/port exposed only to the HTTPS proxy |
 | `TRAILQUEST_TRUSTED_PROXY` | Exact proxy peer trusted by the web container; no CIDR/wildcard |
@@ -60,7 +60,26 @@ docker build --build-arg RELEASE_VERSION=1.0.0 -t trailquest-api:1.0.0 .
 
 Windows: `pwsh -NoLogo -NoProfile -File scripts/check.ps1`. Tests create isolated synthetic databases and HTTP doubles; they never need a real Garmin key. Dockerfiles pin base-image digests, run non-root and exclude local settings, databases, keys and build outputs from context. Release builds exclude EF design-time runtime assemblies. Dependency notices and a CycloneDX application inventory are generated from published assets, not the whole development cache.
 
-The optional GitHub workflows are **manual only**, with no scheduled scans or automatic deployment. Image publication requires a matching version tag and explicit third-party-license acknowledgement. Private repositories may consume Actions allowance; review that before dispatching. Commit, tag, repository visibility, branch protection and package visibility remain owner actions.
+## Automatic Docker images
+
+Each push to `main` or `master` runs the reusable API checks, builds the Linux amd64 image, scans it for vulnerabilities/secrets and publishes to **GHCR** only after all checks pass. Pull requests run verification without publishing. `workflow_dispatch` remains available for supported branches and release tags; there are no scheduled runs or automatic CasaOS deployments.
+
+| Source | Published tags |
+| --- | --- |
+| Default-branch push | `latest`, the branch name and `sha-<full-commit>` |
+| Other supported branch | The branch name and `sha-<full-commit>`; does not replace `latest` |
+| `v1.0.0` tag matching `VERSION` | `1.0.0`, `v1.0.0` and `sha-<full-commit>`; existing release versions are refused |
+
+Ordinary commits do not need a version bump or Git tag. Once the first successful workflow has published both packages:
+
+```bash
+docker pull ghcr.io/david-h-afonso/trailquest-api:latest
+docker pull ghcr.io/david-h-afonso/trailquest-web:latest
+```
+
+Publication uses the job-scoped `GITHUB_TOKEN` with `packages: write`, not a personal token or application credential. Forks publish under their own lower-case owner. The workflow summary records tags, source SHA, digest and a pinned pull command; use that digest for reproducible installs. For anonymous CasaOS pulls, make the GHCR packages public after their first publication; otherwise authenticate the Docker host. See [CasaOS setup](docs/CASAOS.md).
+
+Review bundled dependency/photo terms, including Garmin FIT, before distribution; automation does not grant redistribution rights. Repository/package visibility, branch protection and Actions allowance remain owner settings. Private repositories may consume billable Actions minutes.
 
 ## Data safety and limits
 

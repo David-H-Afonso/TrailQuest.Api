@@ -38,7 +38,7 @@ Copia `deploy/.env.example` a un `.env` privado e ignorado junto a Compose y rel
 
 | Nombres | Finalidad |
 | --- | --- |
-| `TRAILQUEST_API_IMAGE`, `TRAILQUEST_WEB_IMAGE` | Tags o digests inmutables de las dos imágenes |
+| `TRAILQUEST_API_IMAGE`, `TRAILQUEST_WEB_IMAGE` | Referencias publicadas de API/web; usa tags de versión o digests para una instalación fijada |
 | `TRAILQUEST_PUBLIC_HOST`, `TRAILQUEST_PUBLIC_HTTPS_PORT` | Dirección HTTPS externa y enlace de CasaOS |
 | `TRAILQUEST_BIND_ADDRESS`, `TRAILQUEST_HTTP_PORT` | Interfaz/puerto privado accesible solo para el proxy HTTPS |
 | `TRAILQUEST_TRUSTED_PROXY` | IP exacta del proxy que ve el contenedor web; nunca CIDR/comodín |
@@ -60,7 +60,26 @@ docker build --build-arg RELEASE_VERSION=1.0.0 -t trailquest-api:1.0.0 .
 
 En Windows: `pwsh -NoLogo -NoProfile -File scripts/check.ps1`. Las pruebas crean bases sintéticas y dobles HTTP; nunca necesitan tu Garmin. Los Dockerfiles fijan los digests de las bases, ejecutan sin root y excluyen configuración local, bases, claves y compilaciones del contexto. Release no incluye ensamblados de ejecución de herramientas EF de diseño. Las licencias y el inventario CycloneDX se generan a partir de los paquetes publicados, no de toda la caché de desarrollo.
 
-Los workflows de GitHub son **solo manuales**: sin escaneos programados ni despliegue automático. Publicar una imagen requiere un tag que coincida con la versión y confirmar la revisión de terceros. En repos privados pueden consumirse minutos de Actions; revísalo antes de ejecutarlos. Los commits, tags, visibilidad, protección de ramas y paquetes siguen siendo decisiones del propietario.
+## Imágenes Docker automáticas
+
+Cada push a `main` o `master` ejecuta las comprobaciones reutilizables de API, construye la imagen Linux amd64, analiza vulnerabilidades/secretos y publica en **GHCR** solo si todo pasa. Las pull requests verifican sin publicar. Se mantiene `workflow_dispatch` para las ramas admitidas y tags de versión; no hay ejecuciones programadas ni despliegue automático en CasaOS.
+
+| Origen | Tags publicados |
+| --- | --- |
+| Push a la rama predeterminada | `latest`, el nombre de rama y `sha-<commit-completo>` |
+| Otra rama admitida | El nombre de rama y `sha-<commit-completo>`; no sustituye `latest` |
+| Tag `v1.0.0` coincidente con `VERSION` | `1.0.0`, `v1.0.0` y `sha-<commit-completo>`; se rechazan versiones ya publicadas |
+
+Los commits normales no necesitan cambiar la versión ni crear un tag. Tras la primera ejecución correcta que publique ambos paquetes:
+
+```bash
+docker pull ghcr.io/david-h-afonso/trailquest-api:latest
+docker pull ghcr.io/david-h-afonso/trailquest-web:latest
+```
+
+La publicación utiliza `GITHUB_TOKEN` limitado al job con `packages: write`, no un token personal ni credenciales de la app. Los forks publican bajo su propio propietario en minúsculas. El resumen de Actions incluye tags, SHA, digest y el comando de descarga fijada; utiliza ese digest para instalaciones reproducibles. Para descargar desde CasaOS sin iniciar sesión, haz públicos los paquetes GHCR tras su primera publicación; si no, autentica Docker en el servidor. Consulta [la guía de CasaOS](docs/CASAOS.es.md).
+
+Revisa los términos de dependencias/fotos, incluido Garmin FIT, antes de distribuir: automatizar no concede derechos de redistribución. La visibilidad, protección de ramas y límites de Actions siguen siendo ajustes del propietario. Los repos privados pueden consumir minutos facturables.
 
 ## Datos y límites
 

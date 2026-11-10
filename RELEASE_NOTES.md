@@ -3,6 +3,7 @@
 Private activity archive and walking adventures, packaged as independent API and web services.
 
 - Independent API Git repository/image, .NET 10 LTS and locked NuGet dependencies.
+- Automatic GHCR builds on `main`/`master` pushes, with reusable verification, pre-publication image scanning, `latest`/commit tags and optional immutable numbered releases. Pull requests never publish; CasaOS deployment remains manual.
 - No embedded accounts, passwords, Garmin credentials or server-specific addresses. Owner creation/recovery uses a hidden private console; remote first-owner setup remains disabled.
 - Persistent `/data` and `/security`, non-root/read-only container profile, health/readiness probes and single-instance storage protection.
 - Walking adventures, manual Garmin archives, FIT/GPX/TCX/ZIP activities, recorded strength, private sharing and revocable application read grants retained.

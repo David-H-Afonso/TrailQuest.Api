@@ -10,9 +10,17 @@ La API escucha en 8080 sin publicar puerto al host. Nginx Web sirve interfaz y `
 
 Requisitos: Linux amd64, Docker/Compose v2, dominio/certificado HTTPS y proxy administrado por ti. La candidata se comprueba en Docker local aislado; DNS, TLS y firewall reales de CasaOS son verificaciones humanas. No se anuncia ARM64 solo porque existan imágenes base para él.
 
+## Imágenes publicadas
+
+Cada repositorio verifica, construye, analiza y publica su imagen GHCR al hacer push a `main`/`master`. Cuando ambos workflows terminen correctamente, los ejemplos usan `ghcr.io/david-h-afonso/trailquest-api:latest` y `ghcr.io/david-h-afonso/trailquest-web:latest`. No necesitas compilar localmente ni una credencial de la app para descargarlas. Los forks publican bajo su propio propietario en minúsculas.
+
+En GitHub **Packages → paquete → Package settings**, selecciona **Public** para descargar desde CasaOS sin iniciar sesión, o autentica Docker si los paquetes son privados. Un repositorio público no garantiza por sí solo el acceso anónimo al paquete. Si la publicación falla por permisos, revisa el permiso de escritura de paquetes de Actions y el acceso del repositorio/Actions al paquete; los workflows usan `GITHUB_TOKEN`, no un token personal guardado.
+
+Fija la pareja API/web probada con `sha-<commit-completo>` o el digest `@sha256:…` que muestra el resumen de Actions. `latest` sigue la rama predeterminada y no es inmutable; las imágenes numeradas aparecen al subir el tag de versión `v<VERSION>` correspondiente. Conserva los digests anteriores y acuerda la copia de datos/protección antes de actualizar. Actions nunca contacta ni despliega en tu servidor CasaOS.
+
 ## Configura antes de arrancar
 
-1. Copia `deploy/.env.example` a `deploy/.env`, privado e ignorado. Pon tus tags/digests de GHCR; no trates `latest` como inmutable.
+1. Copia `deploy/.env.example` a `deploy/.env`, privado e ignorado. Elige las referencias API/web publicadas, preferiblemente los digests inmutables probados; no trates `latest` como inmutable.
 2. Configura host/puerto HTTPS, interfaz/puerto HTTP privado, zona horaria, subred libre e IP de cada servicio. CasaOS abre **la dirección HTTPS pública**, no HTTPS sobre el puerto HTTP interno.
 3. Indica la IP exacta del proxy que ve Web: NAT puede hacer que no coincida con la IP del contenedor del proxy. Nunca uses una red/comodín ni confíes en cabeceras de cualquier cliente. Restringe el puerto HTTP privado al proxy mediante red/firewall.
 4. Crea los directorios reales para `/data` y `/security`, con propietario UID/GID configurados y permisos privados. Para los valores del ejemplo, un administrador humano puede ejecutar:

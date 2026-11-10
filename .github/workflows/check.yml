@@ -1,5 +1,9 @@
 name: Verify API
-on: workflow_dispatch
+on:
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+  workflow_call:
 permissions:
   contents: read
 jobs:
@@ -21,3 +25,4 @@ jobs:
           name: api-verification-${{ github.sha }}
           path: artifacts/
           if-no-files-found: warn
+          retention-days: 7
