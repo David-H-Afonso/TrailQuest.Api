@@ -8,4 +8,6 @@ Single-active passports support leaving, confirmed switching and resuming withou
 
 Pushes to `main`/`master` automatically verify, build, scan and publish API images to GHCR. Default-branch images receive `latest`, branch and full-commit tags; matching version tags create non-overwritten numbered releases. Pull requests verify without publication.
 
+Image scanning now uses the runner's UID/GID and a writable private cache home, preventing root-owned cache files from failing cleanup. Offline wrapper regressions cover successful scans, security blocks, malformed reports and scanner/export failures.
+
 Migrations preserve activity, history, original start dates and stamps. See [release notes](RELEASE_NOTES.md) and [CasaOS upgrade/recovery](docs/CASAOS.md) for compatibility and operator checks.

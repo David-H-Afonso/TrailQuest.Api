@@ -7,7 +7,9 @@ trap 'rm -rf -- "$work"' EXIT
 umask 077
 mkdir -p "$output" "$work/cache/tmp"
 docker image save --output "$work/image.tar" "$image"
-docker run --rm --read-only --env TMPDIR=/cache/tmp \
+# Keep private cache/report files owned by the runner so EXIT cleanup can remove them.
+docker run --rm --read-only --user "$(id -u):$(id -g)" \
+  --env HOME=/cache --env TMPDIR=/cache/tmp \
   --tmpfs /tmp:rw,noexec,nosuid,size=67108864 \
   --mount "type=bind,source=$work/image.tar,target=/input/image.tar,readonly" \
   --mount "type=bind,source=$work,target=/output" \
