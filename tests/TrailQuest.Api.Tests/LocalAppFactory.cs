@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
@@ -7,6 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using System.Net.Http.Json;
+using System.Net;
 using TrailQuest.Api.Contracts;
 using TrailQuest.Api.Infrastructure.Security;
 using TrailQuest.Api.Application;
@@ -53,7 +55,8 @@ public sealed class StubGarmin : IGarminClient
     }
 }
 
-public sealed class LocalAppFactory(string? sharedDirectory = null, bool demoEnabled = true, string? publicOrigin = null, string? demoFixturePath = null) : WebApplicationFactory<Program>
+public sealed class LocalAppFactory(string? sharedDirectory = null, bool demoEnabled = true, string? publicOrigin = null, string? demoFixturePath = null,
+    bool allowLanHttp = false, string? remoteAddress = null, string[]? knownNetworks = null) : WebApplicationFactory<Program>
 {
     public string DataDirectory { get; } = sharedDirectory ?? Path.Combine(Path.GetTempPath(), "opencode", $"trailquest-test-{Guid.NewGuid():N}");
     public StubGarmin Garmin { get; } = new();
@@ -64,17 +67,24 @@ public sealed class LocalAppFactory(string? sharedDirectory = null, bool demoEna
     {
         Directory.CreateDirectory(DataDirectory);
         builder.UseEnvironment("Testing");
-        builder.ConfigureAppConfiguration((_, config) => config.AddInMemoryCollection(new Dictionary<string, string?>
+        builder.ConfigureAppConfiguration((_, config) =>
         {
-            ["Data:Directory"] = DataDirectory,
-            ["Demo:Enabled"] = demoEnabled.ToString(),
-            ["Demo:FixturePath"] = demoFixturePath ?? Path.Combine(AppContext.BaseDirectory, "Fixtures", "demo.json"),
-            ["Hosting:AllowRemote"] = (publicOrigin is not null).ToString(),
-            ["Hosting:PublicOrigin"] = publicOrigin
-        }));
+            var values = new Dictionary<string, string?>
+            {
+                ["Data:Directory"] = DataDirectory,
+                ["Demo:Enabled"] = demoEnabled.ToString(),
+                ["Demo:FixturePath"] = demoFixturePath ?? Path.Combine(AppContext.BaseDirectory, "Fixtures", "demo.json"),
+                ["Hosting:AllowRemote"] = (publicOrigin is not null).ToString(),
+                ["Hosting:PublicOrigin"] = publicOrigin,
+                ["Hosting:AllowLanHttp"] = allowLanHttp.ToString()
+            };
+            for (var index = 0; index < (knownNetworks?.Length ?? 0); index++) values[$"Hosting:KnownNetworks:{index}"] = knownNetworks![index];
+            config.AddInMemoryCollection(values);
+        });
         builder.ConfigureLogging(logging => logging.ClearProviders());
         builder.ConfigureServices(services =>
         {
+            if (remoteAddress is not null) services.AddSingleton<IStartupFilter>(new SimulatedPeer(IPAddress.Parse(remoteAddress)));
             services.RemoveAll<DbContextOptions<TrailQuestDbContext>>();
             services.RemoveAll<TrailQuestDbContext>();
             var connection = new SqliteConnectionStringBuilder
@@ -89,6 +99,19 @@ public sealed class LocalAppFactory(string? sharedDirectory = null, bool demoEna
             services.RemoveAll<SecurityStorage>();
             services.AddSingleton(_ => new SecurityStorage(Path.Combine(DataDirectory, "fixture-security")));
         });
+    }
+
+    private sealed class SimulatedPeer(IPAddress address) : IStartupFilter
+    {
+        public Action<IApplicationBuilder> Configure(Action<IApplicationBuilder> next) => app =>
+        {
+            app.Use((context, continuation) =>
+            {
+                context.Connection.RemoteIpAddress = address;
+                return continuation(context);
+            });
+            next(app);
+        };
     }
 
     public HttpClient CreateLocalClient()

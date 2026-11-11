@@ -28,10 +28,12 @@ public sealed class LocalApiMiddleware(RequestDelegate next, ILogger<LocalApiMid
             var remote = context.Connection.RemoteIpAddress;
             if (!hosting.AllowRemote && remote is not null && !IPAddress.IsLoopback(remote))
                 throw new AppException("local_only", 403, "Remote access is disabled for this installation.");
-            if (hosting.AllowRemote && (!context.Request.IsHttps ||
+            if (hosting.AllowRemote && (!string.Equals(context.Request.Scheme, hosting.PublicOrigin!.Scheme, StringComparison.OrdinalIgnoreCase) ||
                 !string.Equals(context.Request.Host.Host, hosting.PublicOrigin!.Host, StringComparison.OrdinalIgnoreCase) ||
-                (context.Request.Host.Port ?? 443) != hosting.PublicOrigin.Port))
-                throw new AppException("secure_origin_required", 403, "Use the configured HTTPS origin. Forwarded headers are accepted only from configured proxies.");
+                (context.Request.Host.Port ?? (context.Request.IsHttps ? 443 : 80)) != hosting.PublicOrigin.Port))
+                throw new AppException("secure_origin_required", 403, "Use the configured origin. Forwarded headers are accepted only from configured proxies.");
+            if (hosting.LanHttpEnabled && !HostingPolicy.IsLanClient(remote))
+                throw new AppException("lan_http_only", 403, "HTTP access is limited to private local-network clients. Use HTTPS for Internet access.");
             var origin = context.Request.Headers.Origin.ToString();
             if ((origin.Length > 0 && !hosting.AllowedOrigins.Contains(origin)) || context.Request.Headers["Sec-Fetch-Site"] == "cross-site")
                 throw new AppException("origin_rejected", 403, "Requests from another website are not allowed.");

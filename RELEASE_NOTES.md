@@ -6,6 +6,7 @@ Private activity archive and walking adventures, packaged as independent API and
 - Automatic GHCR builds on `main`/`master` pushes, with reusable verification, pre-publication image scanning, `latest`/commit tags and optional immutable numbered releases. Pull requests never publish; CasaOS deployment remains manual.
 - No embedded accounts, passwords, Garmin credentials or server-specific addresses. Owner creation/recovery uses a hidden private console; remote first-owner setup remains disabled.
 - Persistent `/data` and `/security`, non-root/read-only container profile, health/readiness probes and single-instance storage protection.
+- Explicit private-LAN HTTP opt-in with private-IP/client validation, a separate HttpOnly/Strict cookie and dedicated private proxy CIDRs for dynamic Docker addresses. HTTPS remains the default and is required for Internet access; LAN mode requires a new compatible API image.
 - Walking adventures, manual Garmin archives, FIT/GPX/TCX/ZIP activities, recorded strength, private sharing and revocable application read grants retained.
 - Optional examples disabled by default; personal profiles, history, start dates and earned stamps are preserved.
 - One active passport per profile, explicit leave/switch/resume and preserved inactive progress. Upgrades keep the oldest enrollment active and archive the others without deleting history or stamps.

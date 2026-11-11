@@ -47,7 +47,15 @@ Copia `deploy/.env.example` a un `.env` privado e ignorado junto a Compose y rel
 | `TRAILQUEST_UID`, `TRAILQUEST_GID` | Propietario de los directorios reales montados en la API |
 | `TRAILQUEST_TIME_ZONE`, `TRAILQUEST_DEMO_ENABLED` | Zona del contenedor y activación expresa de los ejemplos |
 
-Las opciones nativas son `Data__Directory`, `Security__KeyDirectory`, `Hosting__AllowRemote`, `Hosting__PublicOrigin`, los `Hosting__KnownProxies__N` numerados, `Hosting__LocalWebPort`, `Hosting__LocalApiPort`, `Demo__Enabled` y `Demo__FixturePath` opcional. Las claves de Garmin se introducen privadamente **en Ajustes de cada cuenta**, no en el contenedor. La importación periódica empieza apagada y requiere la elección expresa del usuario.
+Las opciones nativas son `Data__Directory`, `Security__KeyDirectory`, `Hosting__AllowRemote`, `Hosting__PublicOrigin`, los `Hosting__KnownProxies__N` / `Hosting__KnownNetworks__N` numerados, `Hosting__AllowLanHttp`, `Hosting__LocalWebPort`, `Hosting__LocalApiPort`, `Demo__Enabled` y `Demo__FixturePath` opcional. Las claves de Garmin se introducen privadamente **en Ajustes de cada cuenta**, no en el contenedor. La importación periódica empieza apagada y requiere la elección expresa del usuario.
+
+### HTTP opcional en una LAN de confianza
+
+HTTPS sigue siendo el valor predeterminado para acceso remoto. Una instalación privada puede activar expresamente `Hosting__AllowLanHttp=true` con un `Hosting__PublicOrigin` HTTP que contenga una IP literal RFC1918/ULA, por ejemplo `http://192.168.1.50:5223`. Se rechazan clientes HTTP con IP pública. Este modo no cifra el tráfico: no redirijas su puerto a Internet ni lo uses en redes sin confianza.
+
+Para direcciones Docker dinámicas, `Hosting__KnownNetworks__0` permite confiar en la **subred exclusiva de la app**, como `10.253.52.0/29`, en vez de una IP de contenedor frágil. Solo admite CIDR privados `/24` o más estrechos en IPv4 y `/64` o más estrechos en IPv6; nunca uses una red Docker compartida ni comodines. No publiques el puerto de API. Sin proxy externo todavía, Web puede usar `TRAILQUEST_TRUSTED_FORWARDER=127.0.0.1`; sus peticiones a API siguen en HTTP.
+
+Las sesiones LAN conservan HttpOnly, SameSite=Strict, ámbito del host, comprobación de origen/cabecera y caducidad. Usan la cookie separada `trailquest.lan.session` sin Secure; el modo HTTPS conserva su cookie Secure. LAN no necesita certificado, Caddy ni IPs estáticas de contenedores. La receta Compose normal sigue orientada a HTTPS; cambiar variables no añade esta función a imágenes API antiguas.
 
 ## Comprobar y compilar
 

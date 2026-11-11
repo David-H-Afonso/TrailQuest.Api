@@ -72,12 +72,13 @@ builder.Services.AddOptions<HostFilteringOptions>().PostConfigure<HostingPolicy>
 });
 builder.Services.AddOptions<ForwardedHeadersOptions>().Configure<HostingPolicy>((options, policy) =>
 {
-    if (policy.AllowRemote && policy.KnownProxies.Count > 0)
+    if (policy.AllowRemote && policy.HasTrustedProxies)
     {
         options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedHost;
         options.ForwardLimit = 1;
         options.KnownIPNetworks.Clear(); options.KnownProxies.Clear();
         foreach (var address in policy.KnownProxies) options.KnownProxies.Add(address);
+        foreach (var network in policy.KnownNetworks) options.KnownIPNetworks.Add(network);
         options.AllowedHosts.Add(policy.PublicOrigin!.Host);
     }
 });
@@ -177,7 +178,8 @@ builder.Services.AddOptions<CookieAuthenticationOptions>(CookieAuthenticationDef
     .Configure<TimeProvider, HostingPolicy>((options, clock, policy) =>
     {
         options.TimeProvider = clock;
-        options.Cookie.SecurePolicy = policy.AllowRemote ? CookieSecurePolicy.Always : CookieSecurePolicy.SameAsRequest;
+        options.Cookie.Name = policy.LanHttpEnabled ? "trailquest.lan.session" : "trailquest.session";
+        options.Cookie.SecurePolicy = policy.AllowRemote && !policy.LanHttpEnabled ? CookieSecurePolicy.Always : CookieSecurePolicy.SameAsRequest;
     });
 builder.Services.AddAuthorization();
 builder.Services.AddRateLimiter(options =>
@@ -235,8 +237,8 @@ if (accountCommand is not null)
     return;
 }
 var hosting = app.Services.GetRequiredService<HostingPolicy>();
-if (hosting.AllowRemote && hosting.KnownProxies.Count > 0) app.UseForwardedHeaders();
-if (hosting.AllowRemote) app.UseHsts();
+if (hosting.AllowRemote && hosting.HasTrustedProxies) app.UseForwardedHeaders();
+if (hosting.AllowRemote && !hosting.LanHttpEnabled) app.UseHsts();
 app.UseMiddleware<LocalApiMiddleware>();
 var licensesDirectory = Path.Combine(app.Environment.ContentRootPath, "licenses");
 if (Directory.Exists(licensesDirectory))

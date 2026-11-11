@@ -6,9 +6,9 @@
 
 Usa **`deploy/docker-compose.yml` como proyecto canónico**, con las imágenes API/web publicadas por separado para la misma versión. No hacen falta `docker run`, contenedores de producción alternativos ni otro stack paralelo. Esta guía no despliega automáticamente.
 
-La API escucha en 8080 sin publicar puerto al host. Nginx Web sirve interfaz y `/api` desde el mismo origen. Tu proxy HTTPS accede al puerto privado de Web. Web solo confía en su proxy inmediato y API en la IP exacta de Web. La subred Docker no debe solaparse con otra; Garmin necesita salida a internet solo para importaciones solicitadas, no para consultar lo guardado.
+La API escucha en 8080 sin publicar puerto al host. Nginx Web sirve interfaz y `/api` desde el mismo origen. Tu proxy HTTPS accede al puerto privado de Web. Web solo confía en su proxy inmediato; API admite una IP explícita de Web o la subred privada estrecha y exclusiva de la app. La subred Docker no debe solaparse con otra; Garmin necesita salida a internet solo para importaciones solicitadas, no para consultar lo guardado.
 
-Requisitos: Linux amd64, Docker/Compose v2, dominio/certificado HTTPS y proxy administrado por ti. La candidata se comprueba en Docker local aislado; DNS, TLS y firewall reales de CasaOS son verificaciones humanas. No se anuncia ARM64 solo porque existan imágenes base para él.
+Requisitos: Linux amd64, Docker/Compose v2 y HTTPS/proxy predeterminados o el modo HTTP de LAN privada activado expresamente descrito abajo. La candidata se comprueba en Docker local aislado; DNS, TLS y firewall reales de CasaOS son verificaciones humanas. No se anuncia ARM64 solo porque existan imágenes base para él.
 
 ## Imágenes publicadas
 
@@ -19,6 +19,14 @@ En GitHub **Packages → paquete → Package settings**, selecciona **Public** p
 Fija la pareja API/web probada con `sha-<commit-completo>` o el digest `@sha256:…` que muestra el resumen de Actions. `latest` sigue la rama predeterminada y no es inmutable; las imágenes numeradas aparecen al subir el tag de versión `v<VERSION>` correspondiente. Conserva los digests anteriores y acuerda la copia de datos/protección antes de actualizar. Actions nunca contacta ni despliega en tu servidor CasaOS.
 
 ## Configura antes de arrancar
+
+### HTTP directo opcional para LAN
+
+Con una imagen API compatible, configura `Hosting__AllowRemote=true`, `Hosting__AllowLanHttp=true`, `Hosting__PublicOrigin=http://<IP-privada>:<puerto-web>` y `Hosting__KnownNetworks__0=<subred-privada-exclusiva-de-la-app>`. La URL debe contener una IP privada literal; se rechazan clientes públicos, dominios HTTP y redes de confianza amplias/públicas. Los CIDR de proxy IPv4 deben ser `/24` o más estrechos; IPv6 `/64` o más estrechos. No compartas esa subred con otras apps.
+
+Usa solo API y Web, publica el puerto HTTP de Web, deja privado el de API y utiliza `TRAILQUEST_TRUSTED_FORWARDER=127.0.0.1` mientras no haya proxy externo. No hacen falta IPs estáticas ni redirigir a un proxy HTTPS para que funcionen las sesiones LAN. La cookie LAN separada conserva HttpOnly/Strict y se puede guardar por HTTP; las cookies HTTPS antiguas no la bloquean. Nunca expongas este puerto sin cifrar a Internet. Siguen siendo necesarios el propietario inicial y la persistencia indicados abajo.
+
+### Receta HTTPS predeterminada
 
 1. Copia `deploy/.env.example` a `deploy/.env`, privado e ignorado. Elige las referencias API/web publicadas, preferiblemente los digests inmutables probados; no trates `latest` como inmutable.
 2. Configura host/puerto HTTPS, interfaz/puerto HTTP privado, zona horaria, subred libre e IP de cada servicio. CasaOS abre **la dirección HTTPS pública**, no HTTPS sobre el puerto HTTP interno.

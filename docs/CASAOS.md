@@ -6,9 +6,9 @@
 
 Use the API repository's **`deploy/docker-compose.yml` as the canonical project**, with separately published API/web images from the matching release. No `docker run`, temporary replacement production container or parallel stack is required. This guide does not deploy anything automatically.
 
-The API listens privately on 8080, without a host port. Nginx Web serves the SPA and `/api` on the same origin. Your existing HTTPS reverse proxy forwards to the web service's private published port. Web trusts only its configured proxy peer; API trusts only the exact web-container IP. The dedicated Docker subnet must not overlap another network. Internet egress is needed for explicitly requested Garmin imports, not for reading saved records.
+The API listens privately on 8080, without a host port. Nginx Web serves the SPA and `/api` on the same origin. Your existing HTTPS reverse proxy forwards to the web service's private published port. Web trusts only its configured proxy peer; API trusts an explicit web-container IP or its narrow, dedicated private app subnet. The dedicated Docker subnet must not overlap another network. Internet egress is needed for explicitly requested Garmin imports, not for reading saved records.
 
-Requirements: Linux amd64, Docker Engine/Compose v2, an HTTPS origin/certificate and a reverse proxy you administer. The initial candidate was verified on an isolated local Docker engine; actual CasaOS DNS/TLS/firewall remain operator checks. ARM64 base availability is not an application verification claim; the descriptor advertises amd64 only.
+Requirements: Linux amd64, Docker Engine/Compose v2 and either the default HTTPS/proxy setup or the explicitly enabled private-LAN HTTP mode below. The initial candidate was verified on an isolated local Docker engine; actual CasaOS DNS/TLS/firewall remain operator checks. ARM64 base availability is not an application verification claim; the descriptor advertises amd64 only.
 
 ## Published images
 
@@ -19,6 +19,14 @@ In GitHub **Packages → package → Package settings**, select **Public** for a
 Use the workflow summary's `sha-<full-commit>` tag or `@sha256:…` digest to pin a tested API/web pair. `latest` follows the default branch and is not immutable; numbered images appear only after pushing the matching `v<VERSION>` release tag. Keep the paired previous digests and make the agreed data/protection backup before updating. Actions never contact or deploy to your CasaOS server.
 
 ## Configure before starting
+
+### Optional direct LAN HTTP
+
+With an API image that supports LAN mode, set `Hosting__AllowRemote=true`, `Hosting__AllowLanHttp=true`, `Hosting__PublicOrigin=http://<private-IP>:<web-port>` and `Hosting__KnownNetworks__0=<dedicated-private-app-subnet>`. The URI must contain a literal private IP; public clients, HTTP domain origins and broad/public trusted networks are rejected. IPv4 proxy CIDRs must be `/24` or narrower, IPv6 `/64` or narrower. Keep this subnet exclusive to the app.
+
+Use only API and Web, publish Web's HTTP port, leave the API port private and use `TRAILQUEST_TRUSTED_FORWARDER=127.0.0.1` until an external proxy is configured. Do not assign static container IPs or redirect to an HTTPS sidecar just to make LAN sessions work. The separate LAN cookie retains HttpOnly/Strict and can be stored over HTTP. Old HTTPS cookies do not shadow it. Never expose this unencrypted port to the Internet. Owner provisioning and persistence requirements below still apply.
+
+### Default HTTPS recipe
 
 1. Copy `deploy/.env.example` to an ignored `deploy/.env`. Choose the published API/web references, preferably the tested immutable digests; do not assume `latest` is immutable.
 2. Set public hostname/HTTPS port, the private bind interface/HTTP port, timezone, unused Docker subnet and service IPs. The CasaOS launcher uses the **public HTTPS address**, not HTTPS on the internal HTTP port.

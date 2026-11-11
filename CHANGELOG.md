@@ -10,4 +10,6 @@ Pushes to `main`/`master` automatically verify, build, scan and publish API imag
 
 Image scanning now uses the runner's UID/GID and a writable private cache home, preventing root-owned cache files from failing cleanup. Offline wrapper regressions cover successful scans, security blocks, malformed reports and scanner/export failures.
 
+Optional trusted-LAN HTTP hosting now uses an explicit private-IP origin and a separate HttpOnly/Strict session cookie. Narrow dedicated private proxy CIDRs support dynamic Docker addresses without disabling origin/CSRF checks. HTTPS remains the default; public HTTP clients and broad/public trusted networks are rejected.
+
 Migrations preserve activity, history, original start dates and stamps. See [release notes](RELEASE_NOTES.md) and [CasaOS upgrade/recovery](docs/CASAOS.md) for compatibility and operator checks.
