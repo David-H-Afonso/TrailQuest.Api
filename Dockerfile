@@ -21,8 +21,9 @@ LABEL org.opencontainers.image.title="TrailQuest API" \
       org.opencontainers.image.licenses="MIT"
 WORKDIR /app
 # Pinned security updates for the otherwise immutable Ubuntu base (2026-11-10).
-RUN apt-get -o Acquire::Retries=3 -o APT::Update::Error-Mode=any update \
-    && apt-get -o Acquire::Retries=3 install -y --no-install-recommends --only-upgrade \
+# Build workers may have no IPv6 route; this does not change application networking.
+RUN apt-get -o Acquire::ForceIPv4=true -o Acquire::Retries=3 -o APT::Update::Error-Mode=any update \
+    && apt-get -o Acquire::ForceIPv4=true -o Acquire::Retries=3 install -y --no-install-recommends --only-upgrade \
       apt=2.8.4ubuntu0.1 libapt-pkg6.0t64=2.8.4ubuntu0.1 libpcre2-8-0=10.42-4ubuntu2.2 \
     && rm -rf /var/lib/apt/lists/*
 COPY --from=build /out/ ./

@@ -68,6 +68,16 @@ jobs:
         with:
           # Use the ephemeral runner's network/resolver, not a nested Docker bridge.
           driver-opts: network=host
+      - name: Resolve Ubuntu IPv4 mirrors on the runner
+        id: ubuntu
+        run: |
+          set -euo pipefail
+          hosts="$(bash scripts/resolve-build-hosts.sh)"
+          {
+            echo 'hosts<<TRAILQUEST_UBUNTU_HOSTS'
+            printf '%s\n' "$hosts"
+            echo TRAILQUEST_UBUNTU_HOSTS
+          } >> "$GITHUB_OUTPUT"
       - name: Build local candidate before publication
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
         with:
@@ -75,6 +85,7 @@ jobs:
           platforms: linux/amd64
           load: true
           push: false
+          add-hosts: ${{ steps.ubuntu.outputs.hosts }}
           provenance: false
           tags: trailquest-api:release-check
           build-args: |
@@ -97,6 +108,7 @@ jobs:
           context: .
           platforms: linux/amd64
           push: true
+          add-hosts: ${{ steps.ubuntu.outputs.hosts }}
           tags: ${{ steps.meta.outputs.tags }}
           build-args: |
             RELEASE_VERSION=${{ steps.meta.outputs.version }}
