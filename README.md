@@ -46,8 +46,9 @@ Copy `deploy/.env.example` to a private, ignored `.env` next to Compose and fill
 | `TRAILQUEST_DATA_DIR`, `TRAILQUEST_SECURITY_DIR` | Persistent database and private installation/key directories |
 | `TRAILQUEST_UID`, `TRAILQUEST_GID` | Runtime owner of the actual API bind-mount directories |
 | `TRAILQUEST_TIME_ZONE`, `TRAILQUEST_DEMO_ENABLED` | Container timezone and explicit optional demo opt-in |
+| `TRAILQUEST_ALLOW_LAN_HTTP`, `TRAILQUEST_LAN_HTTP_ORIGIN` | Optional extra private-IP HTTP access alongside HTTPS; default off/empty |
 
-Native API names are `Data__Directory`, `Security__KeyDirectory`, `Hosting__AllowRemote`, `Hosting__PublicOrigin`, numbered `Hosting__KnownProxies__N` / `Hosting__KnownNetworks__N`, `Hosting__AllowLanHttp`, `Hosting__LocalWebPort`, `Hosting__LocalApiPort`, `Demo__Enabled` and optional `Demo__FixturePath`. Garmin credentials are entered privately **inside each user's settings**, not in this configuration. Periodic Garmin import starts disabled and requires that user's explicit opt-in.
+Native API names are `Data__Directory`, `Security__KeyDirectory`, `Hosting__AllowRemote`, `Hosting__PublicOrigin`, numbered `Hosting__KnownProxies__N` / `Hosting__KnownNetworks__N`, `Hosting__AllowLanHttp`, optional `Hosting__LanHttpOrigin`, `Hosting__LocalWebPort`, `Hosting__LocalApiPort`, `Demo__Enabled` and optional `Demo__FixturePath`. Garmin credentials are entered privately **inside each user's settings**, not in this configuration. Periodic Garmin import starts disabled and requires that user's explicit opt-in.
 
 ### Optional HTTP on a trusted LAN
 
@@ -56,6 +57,12 @@ HTTPS remains the default for remote hosting. A private installation may explici
 For dynamic Docker addresses, `Hosting__KnownNetworks__0` can trust the **dedicated app subnet**, such as `10.253.52.0/29`, rather than one fragile container IP. Only private CIDRs `/24` or narrower for IPv4 and `/64` or narrower for IPv6 are accepted; never use a shared Docker subnet or a wildcard. Keep the API port unpublished. With no external proxy yet, Web can use `TRAILQUEST_TRUSTED_FORWARDER=127.0.0.1`; its API requests remain plain HTTP.
 
 LAN sessions retain HttpOnly, SameSite=Strict, host-only scope, origin/client-header checks and expiry. They use the separate `trailquest.lan.session` cookie without Secure; HTTPS mode retains its Secure cookie. No certificate, Caddy sidecar or static container IP is required for LAN mode. The normal Compose recipe remains HTTPS-oriented; changing environment values alone does not add this capability to older API images.
+
+### HTTPS domain and LAN HTTP together
+
+Keep `Hosting__PublicOrigin=https://trailquest.example`, enable `Hosting__AllowLanHttp=true` and add `Hosting__LanHttpOrigin=http://192.168.1.50:5443`. Both origins are explicit; the extra HTTP origin must be a literal private IP. HTTPS uses the host-only Secure `trailquest.session` cookie, LAN uses `trailquest.lan.session` without Secure; both remain HttpOnly/Strict. Public HTTP clients and cross-origin requests between the two accesses are rejected. Authentication/key purposes and existing LAN sessions are retained.
+
+The HTTPS proxy forwards **HTTP** to Web, preserves Host and supplies the external scheme. Set `TRAILQUEST_TRUSTED_FORWARDER` to the exact immediate peer **observed by Web**; Docker NAT may present the app gateway rather than the proxy container IP. The canonical Compose exposes the optional LAN settings as `TRAILQUEST_ALLOW_LAN_HTTP` and `TRAILQUEST_LAN_HTTP_ORIGIN`. Apply a compatible image and complete configuration once, then retain that Compose and both persistent mounts when updating images. Commits/image pulls do not replace installed environment settings; never patch generated files inside running containers. See [CasaOS setup](docs/CASAOS.md).
 
 ## Verify and build
 

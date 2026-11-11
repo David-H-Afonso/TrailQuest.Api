@@ -68,7 +68,7 @@ builder.Services.AddSingleton<HostingPolicy>();
 builder.Services.AddHsts(options => { options.IncludeSubDomains = false; options.Preload = false; });
 builder.Services.AddOptions<HostFilteringOptions>().PostConfigure<HostingPolicy>((options, policy) =>
 {
-    if (policy.AllowRemote) options.AllowedHosts = [policy.PublicOrigin!.Host];
+    if (policy.AllowRemote) options.AllowedHosts = policy.AllowedHosts.ToArray();
 });
 builder.Services.AddOptions<ForwardedHeadersOptions>().Configure<HostingPolicy>((options, policy) =>
 {
@@ -79,7 +79,7 @@ builder.Services.AddOptions<ForwardedHeadersOptions>().Configure<HostingPolicy>(
         options.KnownIPNetworks.Clear(); options.KnownProxies.Clear();
         foreach (var address in policy.KnownProxies) options.KnownProxies.Add(address);
         foreach (var network in policy.KnownNetworks) options.KnownIPNetworks.Add(network);
-        options.AllowedHosts.Add(policy.PublicOrigin!.Host);
+        foreach (var host in policy.AllowedHosts) options.AllowedHosts.Add(host);
     }
 });
 builder.WebHost.ConfigureKestrel(options => options.Limits.MaxRequestBodySize = 16 * 1024);
@@ -178,8 +178,8 @@ builder.Services.AddOptions<CookieAuthenticationOptions>(CookieAuthenticationDef
     .Configure<TimeProvider, HostingPolicy>((options, clock, policy) =>
     {
         options.TimeProvider = clock;
-        options.Cookie.Name = policy.LanHttpEnabled ? "trailquest.lan.session" : "trailquest.session";
         options.Cookie.SecurePolicy = policy.AllowRemote && !policy.LanHttpEnabled ? CookieSecurePolicy.Always : CookieSecurePolicy.SameAsRequest;
+        if (policy.LanHttpEnabled) options.CookieManager = new TransportCookieManager();
     });
 builder.Services.AddAuthorization();
 builder.Services.AddRateLimiter(options =>
@@ -238,7 +238,7 @@ if (accountCommand is not null)
 }
 var hosting = app.Services.GetRequiredService<HostingPolicy>();
 if (hosting.AllowRemote && hosting.HasTrustedProxies) app.UseForwardedHeaders();
-if (hosting.AllowRemote && !hosting.LanHttpEnabled) app.UseHsts();
+if (hosting.AllowRemote) app.UseHsts();
 app.UseMiddleware<LocalApiMiddleware>();
 var licensesDirectory = Path.Combine(app.Environment.ContentRootPath, "licenses");
 if (Directory.Exists(licensesDirectory))

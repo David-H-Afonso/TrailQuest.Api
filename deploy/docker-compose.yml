@@ -18,6 +18,8 @@ services:
       Security__KeyDirectory: /security
       Hosting__AllowRemote: "true"
       Hosting__PublicOrigin: https://${TRAILQUEST_PUBLIC_HOST:?Set the public HTTPS hostname}:${TRAILQUEST_PUBLIC_HTTPS_PORT:-443}
+      Hosting__AllowLanHttp: ${TRAILQUEST_ALLOW_LAN_HTTP:-false}
+      Hosting__LanHttpOrigin: ${TRAILQUEST_LAN_HTTP_ORIGIN:-}
       Hosting__KnownProxies__0: ${TRAILQUEST_WEB_IP:?Set the exact web-container IP}
       Demo__Enabled: ${TRAILQUEST_DEMO_ENABLED:-false}
       TZ: ${TRAILQUEST_TIME_ZONE:-Etc/UTC}

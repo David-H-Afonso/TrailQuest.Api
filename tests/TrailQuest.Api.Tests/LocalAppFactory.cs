@@ -56,7 +56,7 @@ public sealed class StubGarmin : IGarminClient
 }
 
 public sealed class LocalAppFactory(string? sharedDirectory = null, bool demoEnabled = true, string? publicOrigin = null, string? demoFixturePath = null,
-    bool allowLanHttp = false, string? remoteAddress = null, string[]? knownNetworks = null) : WebApplicationFactory<Program>
+    bool allowLanHttp = false, string? remoteAddress = null, string[]? knownNetworks = null, string? lanHttpOrigin = null) : WebApplicationFactory<Program>
 {
     public string DataDirectory { get; } = sharedDirectory ?? Path.Combine(Path.GetTempPath(), "opencode", $"trailquest-test-{Guid.NewGuid():N}");
     public StubGarmin Garmin { get; } = new();
@@ -76,7 +76,8 @@ public sealed class LocalAppFactory(string? sharedDirectory = null, bool demoEna
                 ["Demo:FixturePath"] = demoFixturePath ?? Path.Combine(AppContext.BaseDirectory, "Fixtures", "demo.json"),
                 ["Hosting:AllowRemote"] = (publicOrigin is not null).ToString(),
                 ["Hosting:PublicOrigin"] = publicOrigin,
-                ["Hosting:AllowLanHttp"] = allowLanHttp.ToString()
+                ["Hosting:AllowLanHttp"] = allowLanHttp.ToString(),
+                ["Hosting:LanHttpOrigin"] = lanHttpOrigin
             };
             for (var index = 0; index < (knownNetworks?.Length ?? 0); index++) values[$"Hosting:KnownNetworks:{index}"] = knownNetworks![index];
             config.AddInMemoryCollection(values);

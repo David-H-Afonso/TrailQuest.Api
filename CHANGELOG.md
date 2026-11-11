@@ -12,4 +12,6 @@ Image scanning now uses the runner's UID/GID and a writable private cache home, 
 
 Optional trusted-LAN HTTP hosting now uses an explicit private-IP origin and a separate HttpOnly/Strict session cookie. Narrow dedicated private proxy CIDRs support dynamic Docker addresses without disabling origin/CSRF checks. HTTPS remains the default; public HTTP clients and broad/public trusted networks are rejected.
 
+Optional `Hosting:LanHttpOrigin` lets the HTTPS domain and private-IP HTTP coexist. Cookies are selected per transport without changing authentication/key purposes; both sessions persist across recreation. Cross-origin requests between the registered accesses remain rejected.
+
 Migrations preserve activity, history, original start dates and stamps. See [release notes](RELEASE_NOTES.md) and [CasaOS upgrade/recovery](docs/CASAOS.md) for compatibility and operator checks.

@@ -10,13 +10,14 @@ namespace TrailQuest.Api.Tests;
 public sealed class LanHostingTests
 {
     private const string LanOrigin = "http://192.168.0.32:5223";
+    private const string HttpsOrigin = "https://trailquest.example";
 
-    private static HostingPolicy Policy(string origin, bool allowLanHttp, string? network = null)
+    private static HostingPolicy Policy(string origin, bool allowLanHttp, string? network = null, string? lanOrigin = null)
     {
         var values = new Dictionary<string, string?>
         {
             ["Hosting:AllowRemote"] = "true", ["Hosting:PublicOrigin"] = origin,
-            ["Hosting:AllowLanHttp"] = allowLanHttp.ToString()
+            ["Hosting:AllowLanHttp"] = allowLanHttp.ToString(), ["Hosting:LanHttpOrigin"] = lanOrigin
         };
         if (network is not null) values["Hosting:KnownNetworks:0"] = network;
         return new HostingPolicy(new ConfigurationBuilder().AddInMemoryCollection(values).Build());
@@ -67,6 +68,31 @@ public sealed class LanHostingTests
         Assert.False(policy.LanHttpEnabled);
     }
 
+    [Fact]
+    public void Https_and_explicit_private_http_origins_can_coexist()
+    {
+        var policy = Policy(HttpsOrigin, true, lanOrigin: LanOrigin);
+        Assert.Equal(new Uri(HttpsOrigin), policy.PublicOrigin);
+        Assert.Equal(new Uri(LanOrigin), policy.LanHttpOrigin);
+        Assert.True(policy.LanHttpEnabled);
+        Assert.Equal(2, policy.AllowedOrigins.Count);
+        Assert.Contains(HttpsOrigin, policy.AllowedOrigins);
+        Assert.Contains(LanOrigin, policy.AllowedOrigins);
+        Assert.Contains("trailquest.example", policy.AllowedHosts);
+        Assert.Contains("192.168.0.32", policy.AllowedHosts);
+    }
+
+    [Theory]
+    [InlineData("https://trailquest.example", "http://192.168.0.32:5223", false)]
+    [InlineData("http://192.168.0.32:5223", "http://192.168.0.33:5223", true)]
+    [InlineData("https://trailquest.example", "http://8.8.8.8:5223", true)]
+    [InlineData("https://trailquest.example", "http://local.example:5223", true)]
+    [InlineData("https://trailquest.example", "https://192.168.0.32:5223", true)]
+    [InlineData("https://trailquest.example", "http://192.168.0.32:5223/path", true)]
+    [InlineData("https://trailquest.example", "http://user:password@192.168.0.32:5223", true)]
+    public void Additional_lan_origin_keeps_explicit_opt_in_and_private_ip_guards(string publicOrigin, string lanOrigin, bool optIn) =>
+        Assert.Throws<InvalidOperationException>(() => Policy(publicOrigin, optIn, lanOrigin: lanOrigin));
+
     private static async Task WithOwner(Func<string, Task> test)
     {
         var directory = Path.Combine(Path.GetTempPath(), "opencode", "trailquest-lan-" + Guid.NewGuid().ToString("N"));
@@ -78,9 +104,9 @@ public sealed class LanHostingTests
         finally { if (Directory.Exists(directory)) Directory.Delete(directory, true); }
     }
 
-    private static HttpClient Client(LocalAppFactory app, string origin)
+    private static HttpClient Client(LocalAppFactory app, string origin, bool handleCookies = true)
     {
-        var client = app.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = new Uri(origin), AllowAutoRedirect = false });
+        var client = app.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = new Uri(origin), AllowAutoRedirect = false, HandleCookies = handleCookies });
         client.DefaultRequestHeaders.Add("X-TrailQuest-Client", "local-web");
         client.DefaultRequestHeaders.Add("Origin", origin);
         return client;
@@ -153,5 +179,124 @@ public sealed class LanHostingTests
         client.DefaultRequestHeaders.Add("X-Forwarded-Host", "192.168.0.32:5223");
         client.DefaultRequestHeaders.Add("X-Forwarded-For", clientAddress);
         Assert.Equal(expected, (await client.GetAsync("/api/v1/auth/session")).StatusCode);
+    });
+
+    private static LocalAppFactory MixedApp(string directory, string peer = "192.168.0.50", string[]? networks = null) =>
+        new(directory, publicOrigin: HttpsOrigin, allowLanHttp: true, remoteAddress: peer, knownNetworks: networks, lanHttpOrigin: LanOrigin);
+
+    private static async Task<string> Login(HttpClient client, bool secure)
+    {
+        var response = await client.PostAsJsonAsync("/api/v1/auth/login", new { username = "fixture-owner", password = LocalAppFactory.FixturePassword });
+        response.EnsureSuccessStatusCode();
+        var cookie = response.Headers.GetValues("Set-Cookie").Single();
+        Assert.Equal(secure ? "trailquest.session" : "trailquest.lan.session", cookie.Split('=', 2)[0]);
+        var attributes = cookie.Split(';').Skip(1).Select(part => part.Trim().ToLowerInvariant()).ToArray();
+        Assert.Contains("httponly", attributes);
+        Assert.Contains("samesite=strict", attributes);
+        Assert.DoesNotContain(attributes, part => part.StartsWith("domain=", StringComparison.Ordinal));
+        if (secure) Assert.Contains("secure", attributes);
+        else Assert.DoesNotContain("secure", attributes);
+        Assert.Equal(secure, response.Headers.Contains("Strict-Transport-Security"));
+        return cookie.Split(';', 2)[0];
+    }
+
+    [Fact]
+    public Task Both_origins_support_real_login_private_reads_and_transport_specific_logout_cookies() => WithOwner(async directory =>
+    {
+        using var app = MixedApp(directory);
+        foreach (var origin in new[] { LanOrigin, HttpsOrigin })
+        {
+            using var client = Client(app, origin);
+            var secure = origin == HttpsOrigin;
+            await Login(client, secure);
+            Assert.NotNull((await client.GetFromJsonAsync<SessionDto>("/api/v1/auth/session"))!.User);
+            Assert.Equal(HttpStatusCode.OK, (await client.GetAsync("/api/v1/profiles/personal/dashboard")).StatusCode);
+            var logout = await client.PostAsync("/api/v1/auth/logout", null);
+            Assert.Equal(HttpStatusCode.NoContent, logout.StatusCode);
+            Assert.Equal(secure ? "trailquest.session" : "trailquest.lan.session", logout.Headers.GetValues("Set-Cookie").Single().Split('=', 2)[0]);
+            Assert.Null((await client.GetFromJsonAsync<SessionDto>("/api/v1/auth/session"))!.User);
+        }
+    });
+
+    [Theory]
+    [InlineData("http://trailquest.example")]
+    [InlineData("https://192.168.0.32:5223")]
+    [InlineData("http://192.168.0.32:5224")]
+    public Task Mixed_hosting_rejects_unconfigured_scheme_and_port_combinations(string origin) => WithOwner(async directory =>
+    {
+        using var app = MixedApp(directory);
+        using var client = Client(app, origin);
+        Assert.Equal(HttpStatusCode.Forbidden, (await client.GetAsync("/api/v1/auth/session")).StatusCode);
+    });
+
+    [Theory]
+    [InlineData("https://trailquest.example", "http://192.168.0.32:5223")]
+    [InlineData("http://192.168.0.32:5223", "https://trailquest.example")]
+    public Task A_registered_origin_does_not_authorize_cross_origin_requests_to_the_other_access(string target, string origin) => WithOwner(async directory =>
+    {
+        using var app = MixedApp(directory);
+        using var client = Client(app, target);
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/auth/session");
+        request.Headers.Add("Origin", origin);
+        var response = await client.SendAsync(request);
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        Assert.Contains("origin_rejected", await response.Content.ReadAsStringAsync());
+    });
+
+    [Fact]
+    public Task Public_https_clients_are_allowed_while_public_lan_http_clients_stay_blocked() => WithOwner(async directory =>
+    {
+        using var app = MixedApp(directory, "10.253.52.3", ["10.253.52.0/29"]);
+        using var https = Client(app, HttpsOrigin);
+        https.BaseAddress = new Uri("http://trailquest.example");
+        https.DefaultRequestHeaders.Add("X-Forwarded-Proto", "https");
+        https.DefaultRequestHeaders.Add("X-Forwarded-Host", "trailquest.example");
+        https.DefaultRequestHeaders.Add("X-Forwarded-For", "8.8.8.8");
+        await Login(https, true);
+        using var http = Client(app, LanOrigin);
+        http.DefaultRequestHeaders.Add("X-Forwarded-Proto", "http");
+        http.DefaultRequestHeaders.Add("X-Forwarded-Host", "192.168.0.32:5223");
+        http.DefaultRequestHeaders.Add("X-Forwarded-For", "8.8.8.8");
+        var response = await http.GetAsync("/api/v1/auth/session");
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        Assert.Contains("lan_http_only", await response.Content.ReadAsStringAsync());
+    });
+
+    [Fact]
+    public Task Both_sessions_survive_application_recreation_with_preserved_data_and_keys() => WithOwner(async directory =>
+    {
+        string lanCookie, httpsCookie;
+        using (var app = MixedApp(directory))
+        {
+            using var http = Client(app, LanOrigin);
+            using var https = Client(app, HttpsOrigin);
+            lanCookie = await Login(http, false);
+            httpsCookie = await Login(https, true);
+        }
+        using var recreated = MixedApp(directory);
+        foreach (var (origin, cookie) in new[] { (LanOrigin, lanCookie), (HttpsOrigin, httpsCookie) })
+        {
+            using var client = Client(recreated, origin, false);
+            client.DefaultRequestHeaders.Add("Cookie", cookie);
+            Assert.NotNull((await client.GetFromJsonAsync<SessionDto>("/api/v1/auth/session"))!.User);
+        }
+        using var wrongTransport = Client(recreated, LanOrigin, false);
+        wrongTransport.DefaultRequestHeaders.Add("Cookie", httpsCookie);
+        Assert.Null((await wrongTransport.GetFromJsonAsync<SessionDto>("/api/v1/auth/session"))!.User);
+    });
+
+    [Fact]
+    public Task Adding_https_does_not_invalidate_the_existing_lan_session() => WithOwner(async directory =>
+    {
+        string cookie;
+        using (var original = new LocalAppFactory(directory, publicOrigin: LanOrigin, allowLanHttp: true, remoteAddress: "192.168.0.50"))
+        {
+            using var client = Client(original, LanOrigin);
+            cookie = await Login(client, false);
+        }
+        using var app = MixedApp(directory);
+        using var restored = Client(app, LanOrigin, false);
+        restored.DefaultRequestHeaders.Add("Cookie", cookie);
+        Assert.NotNull((await restored.GetFromJsonAsync<SessionDto>("/api/v1/auth/session"))!.User);
     });
 }

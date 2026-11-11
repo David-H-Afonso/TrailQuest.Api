@@ -26,6 +26,12 @@ With an API image that supports LAN mode, set `Hosting__AllowRemote=true`, `Host
 
 Use only API and Web, publish Web's HTTP port, leave the API port private and use `TRAILQUEST_TRUSTED_FORWARDER=127.0.0.1` until an external proxy is configured. Do not assign static container IPs or redirect to an HTTPS sidecar just to make LAN sessions work. The separate LAN cookie retains HttpOnly/Strict and can be stored over HTTP. Old HTTPS cookies do not shadow it. Never expose this unencrypted port to the Internet. Owner provisioning and persistence requirements below still apply.
 
+### Simultaneous HTTPS domain and LAN HTTP
+
+Use the HTTPS domain as `Hosting__PublicOrigin`, retain `Hosting__AllowLanHttp=true` and add a literal private-IP `Hosting__LanHttpOrigin=http://<private-IP>:<web-port>`. With the canonical Compose, use `TRAILQUEST_ALLOW_LAN_HTTP=true` and `TRAILQUEST_LAN_HTTP_ORIGIN=http://<private-IP>:<web-port>`. Do not replace the HTTPS public origin with the IP: both accesses are explicitly supported. Public HTTPS clients are allowed; the private-client restriction applies only to HTTP. Cookies are transport-specific and cross-origin requests between the accesses are rejected.
+
+The proxy forwards HTTP to Web and Web trusts only its exact observed immediate peer; Docker NAT may present the app gateway instead of the Nginx Proxy Manager container IP. Apply a compatible image plus complete Compose once, then preserve its environment and both storage mounts on image updates. Do not edit generated Nginx files inside containers or replace the installation with an unconfigured example. The maintained container smoke test verifies both logins and both sessions across container recreation with synthetic storage.
+
 ### Default HTTPS recipe
 
 1. Copy `deploy/.env.example` to an ignored `deploy/.env`. Choose the published API/web references, preferably the tested immutable digests; do not assume `latest` is immutable.

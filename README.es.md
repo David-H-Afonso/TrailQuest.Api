@@ -46,8 +46,9 @@ Copia `deploy/.env.example` a un `.env` privado e ignorado junto a Compose y rel
 | `TRAILQUEST_DATA_DIR`, `TRAILQUEST_SECURITY_DIR` | Directorios persistentes de la base y protección de la instalación |
 | `TRAILQUEST_UID`, `TRAILQUEST_GID` | Propietario de los directorios reales montados en la API |
 | `TRAILQUEST_TIME_ZONE`, `TRAILQUEST_DEMO_ENABLED` | Zona del contenedor y activación expresa de los ejemplos |
+| `TRAILQUEST_ALLOW_LAN_HTTP`, `TRAILQUEST_LAN_HTTP_ORIGIN` | HTTP adicional por IP privada junto a HTTPS; desactivado/vacío por defecto |
 
-Las opciones nativas son `Data__Directory`, `Security__KeyDirectory`, `Hosting__AllowRemote`, `Hosting__PublicOrigin`, los `Hosting__KnownProxies__N` / `Hosting__KnownNetworks__N` numerados, `Hosting__AllowLanHttp`, `Hosting__LocalWebPort`, `Hosting__LocalApiPort`, `Demo__Enabled` y `Demo__FixturePath` opcional. Las claves de Garmin se introducen privadamente **en Ajustes de cada cuenta**, no en el contenedor. La importación periódica empieza apagada y requiere la elección expresa del usuario.
+Las opciones nativas son `Data__Directory`, `Security__KeyDirectory`, `Hosting__AllowRemote`, `Hosting__PublicOrigin`, los `Hosting__KnownProxies__N` / `Hosting__KnownNetworks__N` numerados, `Hosting__AllowLanHttp`, `Hosting__LanHttpOrigin` opcional, `Hosting__LocalWebPort`, `Hosting__LocalApiPort`, `Demo__Enabled` y `Demo__FixturePath` opcional. Las claves de Garmin se introducen privadamente **en Ajustes de cada cuenta**, no en el contenedor. La importación periódica empieza apagada y requiere la elección expresa del usuario.
 
 ### HTTP opcional en una LAN de confianza
 
@@ -56,6 +57,12 @@ HTTPS sigue siendo el valor predeterminado para acceso remoto. Una instalación 
 Para direcciones Docker dinámicas, `Hosting__KnownNetworks__0` permite confiar en la **subred exclusiva de la app**, como `10.253.52.0/29`, en vez de una IP de contenedor frágil. Solo admite CIDR privados `/24` o más estrechos en IPv4 y `/64` o más estrechos en IPv6; nunca uses una red Docker compartida ni comodines. No publiques el puerto de API. Sin proxy externo todavía, Web puede usar `TRAILQUEST_TRUSTED_FORWARDER=127.0.0.1`; sus peticiones a API siguen en HTTP.
 
 Las sesiones LAN conservan HttpOnly, SameSite=Strict, ámbito del host, comprobación de origen/cabecera y caducidad. Usan la cookie separada `trailquest.lan.session` sin Secure; el modo HTTPS conserva su cookie Secure. LAN no necesita certificado, Caddy ni IPs estáticas de contenedores. La receta Compose normal sigue orientada a HTTPS; cambiar variables no añade esta función a imágenes API antiguas.
+
+### Dominio HTTPS y HTTP de LAN a la vez
+
+Conserva `Hosting__PublicOrigin=https://trailquest.example`, activa `Hosting__AllowLanHttp=true` y añade `Hosting__LanHttpOrigin=http://192.168.1.50:5443`. Ambos orígenes son explícitos y el HTTP adicional debe ser una IP privada literal. HTTPS usa `trailquest.session`, limitada al host y Secure; LAN usa `trailquest.lan.session` sin Secure. Ambas conservan HttpOnly/Strict. Se rechazan clientes HTTP públicos y peticiones cruzadas entre ambos accesos. Se conservan los propósitos criptográficos y las sesiones LAN existentes.
+
+El proxy HTTPS reenvía por **HTTP** a Web, conserva Host y comunica el esquema externo. Configura `TRAILQUEST_TRUSTED_FORWARDER` con el peer inmediato exacto **observado por Web**; Docker NAT puede mostrar el gateway de la app en vez de la IP del contenedor proxy. El Compose canónico expone las opciones LAN como `TRAILQUEST_ALLOW_LAN_HTTP` y `TRAILQUEST_LAN_HTTP_ORIGIN`. Aplica una API compatible y la configuración completa una vez; después conserva ese Compose y ambos directorios persistentes al actualizar imágenes. Los commits/descargas no sustituyen las variables instaladas; no parches archivos generados dentro de contenedores. Consulta la [guía de CasaOS](docs/CASAOS.es.md).
 
 ## Comprobar y compilar
 

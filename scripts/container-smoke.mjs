@@ -47,7 +47,8 @@ const proxy=createHttpsServer({key:await readFile(key),cert:await readFile(certi
 });
 await new Promise(resolve=>proxy.listen(0,'127.0.0.1',resolve));
 const tlsPort=proxy.address().port;const origin=`https://localhost:${tlsPort}`;
-const settings={TRAILQUEST_API_IMAGE:apiImage,TRAILQUEST_WEB_IMAGE:webImage,TRAILQUEST_PUBLIC_HOST:'localhost',TRAILQUEST_PUBLIC_HTTPS_PORT:tlsPort,TRAILQUEST_TRUSTED_PROXY:`${base}.1`,TRAILQUEST_BIND_ADDRESS:'127.0.0.1',TRAILQUEST_HTTP_PORT:webPort,TRAILQUEST_DATA_DIR:data.replaceAll('\\','/'),TRAILQUEST_SECURITY_DIR:security.replaceAll('\\','/'),TRAILQUEST_UID:1654,TRAILQUEST_GID:1654,TRAILQUEST_TIME_ZONE:'Etc/UTC',TRAILQUEST_DEMO_ENABLED:'false',TRAILQUEST_SUBNET:subnet,TRAILQUEST_WEB_IP:`${base}.2`,TRAILQUEST_API_IP:`${base}.3`};
+const lanHost=`192.168.250.10:${webPort}`,lanOrigin=`http://${lanHost}`;
+const settings={TRAILQUEST_API_IMAGE:apiImage,TRAILQUEST_WEB_IMAGE:webImage,TRAILQUEST_PUBLIC_HOST:'localhost',TRAILQUEST_PUBLIC_HTTPS_PORT:tlsPort,TRAILQUEST_ALLOW_LAN_HTTP:'true',TRAILQUEST_LAN_HTTP_ORIGIN:lanOrigin,TRAILQUEST_TRUSTED_PROXY:`${base}.1`,TRAILQUEST_BIND_ADDRESS:'127.0.0.1',TRAILQUEST_HTTP_PORT:webPort,TRAILQUEST_DATA_DIR:data.replaceAll('\\','/'),TRAILQUEST_SECURITY_DIR:security.replaceAll('\\','/'),TRAILQUEST_UID:1654,TRAILQUEST_GID:1654,TRAILQUEST_TIME_ZONE:'Etc/UTC',TRAILQUEST_DEMO_ENABLED:'false',TRAILQUEST_SUBNET:subnet,TRAILQUEST_WEB_IP:`${base}.2`,TRAILQUEST_API_IP:`${base}.3`};
 async function saveSettings(){await writeFile(config,Object.entries(settings).map(([name,value])=>`${name}=${value}`).join('\n')+'\n');}
 await saveSettings();
 function prepareDirectories(dataPath,securityPath){docker(['run','--rm','--user','0:0','--entrypoint','sh','--mount',`type=bind,source=${dataPath},target=/data`,'--mount',`type=bind,source=${securityPath},target=/security`,apiImage,'-ec','chown 1654:1654 /data /security; chmod 700 /data /security']);}
@@ -55,11 +56,11 @@ const password=`Synthetic ${randomBytes(18).toString('base64')} 42!`;
 const memberPassword=`Synthetic ${randomBytes(18).toString('base64')} 86!`;
 const owner={username:'release-owner',password};const member={username:'release-member',password:memberPassword};
 function maintenance(action,secret,extra=[]){const result=docker([...compose,'run','--rm','--no-deps','-T','trailquest-api',`--Account:Action=${action}`,'--Account:Username=release-owner','--Account:PasswordInput=stdin',...(action==='create-owner'?['--Account:DisplayName=Alex']:[]),...extra],{input:secret+'\n',allowFailure:true});assert(!result.stdout.includes(secret)&&!result.stderr.includes(secret),'Maintenance must not echo the secret');return result;}
-async function request(path,{method='GET',cookie,body,headers={}}={}){
-  const bytes=body===undefined?undefined:Buffer.isBuffer(body)?body:Buffer.from(JSON.stringify(body));
-  return await new Promise((resolve,reject)=>{const req=httpsRequest({hostname:'127.0.0.1',port:tlsPort,path,method,agent:false,rejectUnauthorized:false,headers:{Host:`localhost:${tlsPort}`,Connection:'close',Origin:origin,'X-TrailQuest-Client':'local-web',...(cookie?{Cookie:cookie}:{}),...(bytes?{'Content-Type':'application/json','Content-Length':bytes.length}:{}),...headers}},res=>{const chunks=[];res.on('data',chunk=>chunks.push(chunk));res.on('error',reject);res.on('end',()=>{const buffer=Buffer.concat(chunks);let json;try{json=JSON.parse(buffer.toString());}catch{}resolve({status:res.statusCode,headers:res.headers,buffer,json});});});req.on('error',reject);if(bytes)req.write(bytes);req.end();});
+async function request(path,{method='GET',cookie,body,headers={},lan=false}={}){
+    const bytes=body===undefined?undefined:Buffer.isBuffer(body)?body:Buffer.from(JSON.stringify(body));
+  return await new Promise((resolve,reject)=>{const req=(lan?httpRequest:httpsRequest)({hostname:'127.0.0.1',port:lan?webPort:tlsPort,path,method,agent:false,rejectUnauthorized:false,headers:{Host:lan?lanHost:`localhost:${tlsPort}`,Connection:'close',Origin:lan?lanOrigin:origin,'X-TrailQuest-Client':'local-web',...(cookie?{Cookie:cookie}:{}),...(bytes?{'Content-Type':'application/json','Content-Length':bytes.length}:{}),...headers}},res=>{const chunks=[];res.on('data',chunk=>chunks.push(chunk));res.on('error',reject);res.on('end',()=>{const buffer=Buffer.concat(chunks);let json;try{json=JSON.parse(buffer.toString());}catch{}resolve({status:res.statusCode,headers:res.headers,buffer,json});});});req.on('error',reject);if(bytes)req.write(bytes);req.end();});
 }
-async function login(username,secret){const result=await request('/api/v1/auth/login',{method:'POST',body:{username,password:secret}});assert.equal(result.status,200);const cookies=result.headers['set-cookie'];assert(cookies?.some(value=>/; secure/i.test(value)&&/; httponly/i.test(value)&&/samesite=strict/i.test(value)));return cookies.map(value=>value.split(';')[0]).join('; ');}
+async function login(username,secret,lan=false){const result=await request('/api/v1/auth/login',{method:'POST',body:{username,password:secret},lan});assert.equal(result.status,200);const cookies=result.headers['set-cookie'];assert(cookies?.some(value=>/; secure/i.test(value)===!lan&&/; httponly/i.test(value)&&/samesite=strict/i.test(value)));assert.equal(cookies[0].split('=')[0],lan?'trailquest.lan.session':'trailquest.session');return cookies.map(value=>value.split(';')[0]).join('; ');}
 const fingerprint=dashboard=>JSON.stringify({history:dashboard.history,totals:dashboard.totals,journey:dashboard.currentJourney,settings:dashboard.settings});
 let completed=false;
 try{
@@ -82,6 +83,11 @@ try{
   const info=await request('/api/v1/health');assert.equal(info.json.version,'1.0.0');assert.equal((await request('/version.json')).json.version,'1.0.0');
   assert.equal((await request('/api/v1/profiles/personal/health')).status,401);record('paired-version-and-anonymous-isolation');
   let ownerCookie=await login(owner.username,password);record('secure-cookie-login');
+  const lanSession=await request('/api/v1/auth/session',{lan:true});assert.equal(lanSession.status,200);assert.equal(lanSession.headers['strict-transport-security'],undefined);
+  assert.equal((await request('/api/v1/profiles/personal/dashboard',{lan:true})).status,401);
+  const lanCookie=await login(owner.username,password,true);assert.equal((await request('/api/v1/profiles/personal/dashboard',{cookie:lanCookie,lan:true})).status,200);
+  assert.equal((await request('/api/v1/auth/session',{lan:true,headers:{Origin:origin}})).status,403);
+  assert.equal((await request('/api/v1/auth/session',{cookie:ownerCookie,lan:true})).json.user,null);record('simultaneous-lan-http-and-proxied-https-with-distinct-cookies');
   const ownerSession=(await request('/api/v1/auth/session',{cookie:ownerCookie})).json;
   let dashboard=(await request('/api/v1/profiles/personal/dashboard',{cookie:ownerCookie})).json;const today=dashboard.today;
   assert.equal(dashboard.history.length,0);assert.equal((await request('/api/v1/demo/status')).json.available,false);
@@ -111,6 +117,7 @@ try{
   const before=fingerprint((await request('/api/v1/profiles/personal/dashboard',{cookie:ownerCookie})).json);
   docker([...compose,'up','-d','--wait','--wait-timeout','90','--force-recreate']);
   assert.equal((await request('/api/v1/auth/session',{cookie:ownerCookie})).json.user.id,ownerSession.user.id);assert.equal(fingerprint((await request('/api/v1/profiles/personal/dashboard',{cookie:ownerCookie})).json),before);record('container-recreation-retains-data-and-protected-session');
+  assert.equal((await request('/api/v1/auth/session',{cookie:lanCookie,lan:true})).json.user.id,ownerSession.user.id);assert.equal(fingerprint((await request('/api/v1/profiles/personal/dashboard',{cookie:lanCookie,lan:true})).json),before);record('lan-and-https-sessions-both-survive-image-container-recreation');
   docker([...compose,'exec','-T','trailquest-api','dotnet','TrailQuest.Api.dll','--Backup:Destination=/data/synthetic-snapshot.db']);record('coherent-db-backup-while-running');
   docker([...compose,'stop','trailquest-api']);const backup=join(artifacts,'synthetic-full-backup');await mkdir(backup);
   docker(['run','--rm','--user','0:0','--entrypoint','sh','--mount',`type=bind,source=${data},target=/source/data,readonly`,'--mount',`type=bind,source=${security},target=/source/security,readonly`,'--mount',`type=bind,source=${backup},target=/backup`,apiImage,'-ec','cp -a /source/data /backup/data; cp -a /source/security /backup/security']);

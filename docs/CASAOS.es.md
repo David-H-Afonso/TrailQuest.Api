@@ -26,6 +26,12 @@ Con una imagen API compatible, configura `Hosting__AllowRemote=true`, `Hosting__
 
 Usa solo API y Web, publica el puerto HTTP de Web, deja privado el de API y utiliza `TRAILQUEST_TRUSTED_FORWARDER=127.0.0.1` mientras no haya proxy externo. No hacen falta IPs estáticas ni redirigir a un proxy HTTPS para que funcionen las sesiones LAN. La cookie LAN separada conserva HttpOnly/Strict y se puede guardar por HTTP; las cookies HTTPS antiguas no la bloquean. Nunca expongas este puerto sin cifrar a Internet. Siguen siendo necesarios el propietario inicial y la persistencia indicados abajo.
 
+### Dominio HTTPS y HTTP de LAN simultáneos
+
+Usa el dominio HTTPS como `Hosting__PublicOrigin`, conserva `Hosting__AllowLanHttp=true` y añade `Hosting__LanHttpOrigin=http://<IP-privada>:<puerto-web>` con una IP privada literal. En el Compose canónico usa `TRAILQUEST_ALLOW_LAN_HTTP=true` y `TRAILQUEST_LAN_HTTP_ORIGIN=http://<IP-privada>:<puerto-web>`. No sustituyas el origen HTTPS por la IP: se admiten ambos accesos explícitamente. Se permiten clientes HTTPS públicos; la restricción a clientes privados se aplica solo a HTTP. Las cookies son distintas por transporte y se rechazan peticiones cruzadas entre ambos accesos.
+
+El proxy reenvía HTTP a Web y Web solo confía en su peer inmediato exacto observado; Docker NAT puede mostrar el gateway de la app en vez de la IP de Nginx Proxy Manager. Aplica una API compatible y el Compose completo una vez; después conserva sus variables y ambos directorios al actualizar imágenes. No edites archivos Nginx generados dentro de contenedores ni sustituyas la instalación por un ejemplo sin configurar. La prueba mantenida de contenedores verifica ambos logins y ambas sesiones tras recrear usando almacenamiento sintético.
+
 ### Receta HTTPS predeterminada
 
 1. Copia `deploy/.env.example` a `deploy/.env`, privado e ignorado. Elige las referencias API/web publicadas, preferiblemente los digests inmutables probados; no trates `latest` como inmutable.
