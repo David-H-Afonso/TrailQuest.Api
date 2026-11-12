@@ -26,5 +26,16 @@ public sealed record SyncPreferencesDto(IReadOnlyList<string> Datasets, int Inte
 public sealed record SaveSyncPreferencesRequest(IReadOnlyList<string> Datasets, int IntervalHours, int LookbackDays, bool ImportOriginals);
 public sealed record FullSyncRequest(DateOnly? StartDate, DateOnly? EndDate);
 public sealed record RawDocumentDto(long Id, string Dataset, DateOnly Date, string Source, DateTimeOffset RetrievedAtUtc, JsonElement Data);
+public sealed record GarminExportPrivacyDto(bool IncludesCredentials, bool IncludesOriginalActivityFiles, bool IncludesGpsTracks);
+public sealed record GarminExportStepDto(int Steps, double DistanceMeters, double StepLengthCm, bool DistanceEstimated);
+public sealed record GarminExportActivityDto(string Name, string Sport, DateTimeOffset StartedAtUtc,
+    double? DurationSeconds, double? DistanceMeters, double? CaloriesKcal, double? AverageHeartRate,
+    int? Repetitions, int? Sets, double? VolumeKg, IReadOnlyList<ExerciseDto> Exercises);
+public sealed record GarminExportHealthRecordDto(string Dataset, JsonElement Data);
+public sealed record GarminExportDayDto(DateOnly Date, IReadOnlyList<GarminExportStepDto> Steps,
+    IReadOnlyList<GarminExportActivityDto> Activities, IReadOnlyList<GarminExportHealthRecordDto> HealthRecords);
+public sealed record GarminDataExportDto(int SchemaVersion, DateTimeOffset ExportedAtUtc, string ProfileId,
+    DateOnly StartDate, DateOnly EndDate, IReadOnlyList<string> Datasets, IReadOnlyList<string> SensitiveDatasets,
+    GarminExportPrivacyDto Privacy, IReadOnlyList<GarminExportDayDto> Days);
 public sealed record ChallengeDto(string Id, string Name, string Description, string Metric, string Unit,
     double Target, double Value, double ProgressPercent, bool Completed, string ComparisonNote);

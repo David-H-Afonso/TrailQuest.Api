@@ -72,6 +72,73 @@ public sealed class HealthService(TrailQuestDbContext db, CurrentUser current, T
         var documents = await query.ToListAsync(ct);
         return documents.Select(x => new RawDocumentDto(x.Id, x.Dataset, x.Date, x.Source, x.RetrievedAtUtc, JsonSerializer.Deserialize<JsonElement>(x.PayloadJson))).ToList();
     }
+
+    public async Task<GarminDataExportDto> ExportGarminDataAsync(string kind, DateOnly start, DateOnly end,
+        IReadOnlyList<string>? requestedDatasets, CancellationToken ct)
+    {
+        var profile = await ProfileAsync(kind, ct);
+        if (profile.Kind != "personal") throw new AppException("personal_profile_required", 400, "Garmin exports are only available for your personal profile.");
+        ValidateRange(start, end);
+        if (end > Today(profile)) throw new AppException("invalid_range", 400, "The export period cannot include future dates.");
+
+        var requested = (requestedDatasets ?? []).Select(x => x.Trim()).Where(x => x.Length > 0).Distinct(StringComparer.Ordinal).ToArray();
+        var known = GarminDatasets.All;
+        IReadOnlyList<DatasetDto> selected;
+        if (requested.Length == 1 && requested[0] == "all") selected = known;
+        else
+        {
+            if (requested.Length == 0 || requested.Contains("all", StringComparer.Ordinal) || requested.Any(x => known.All(d => d.Id != x)))
+                throw new AppException("invalid_dataset_selection", 400, "Select all datasets or one or more valid Garmin datasets.");
+            var ids = requested.ToHashSet(StringComparer.Ordinal);
+            selected = known.Where(x => ids.Contains(x.Id)).ToList();
+        }
+
+        // Garmin activity source records are exported as summaries below. Do not copy raw
+        // activity detail documents here: provider payloads may contain location fields.
+        var documentDatasets = selected.Where(x => x.Id != "activities")
+            .SelectMany(x => new[] { x.Id, x.Id + "-envelope" }).Distinct(StringComparer.Ordinal).ToArray();
+        var documentsQuery = db.HealthDocuments.AsNoTracking().Where(x => x.ProfileId == profile.Id && x.Source == "garmin" &&
+            x.Date >= start && x.Date <= end && documentDatasets.Contains(x.Dataset));
+        var includeSteps = selected.Any(x => x.Id == "steps");
+        var stepsQuery = db.DailySteps.AsNoTracking().Where(x => includeSteps && x.ProfileId == profile.Id &&
+            x.Source == "garmin" && x.Date >= start && x.Date <= end);
+        var includeActivities = selected.Any(x => x.Id == "activities");
+        var activitiesQuery = db.Activities.AsNoTracking().Where(x => includeActivities && x.ProfileId == profile.Id &&
+            x.Source == "garmin" && x.Date >= start && x.Date <= end);
+
+        await using var transaction = await db.Database.BeginTransactionAsync(ct);
+        await ArchiveReadBudget.EnsureAsync(documentsQuery, activitiesQuery, includeTracks: false, ct);
+        var rawDocuments = await documentsQuery.OrderBy(x => x.Date).ThenBy(x => x.Dataset).ThenBy(x => x.Id)
+            .Select(x => new { x.Date, x.Dataset, x.PayloadJson }).ToListAsync(ct);
+        var steps = await stepsQuery.OrderBy(x => x.Date)
+            .Select(x => new { x.Date, x.Steps, x.DistanceMeters, x.StepLengthCm, x.IsDistanceEstimated }).ToListAsync(ct);
+        var rawActivities = await activitiesQuery.OrderBy(x => x.Date).ThenBy(x => x.SourceId)
+            .Select(x => new { x.Date, x.Name, x.Sport, x.StartedAtUtc, x.DurationSeconds, x.DistanceMeters,
+                x.CaloriesKcal, x.AverageHeartRate, x.Repetitions, x.Sets, x.VolumeKg, x.ExercisesJson }).ToListAsync(ct);
+
+        var stepsByDate = steps.GroupBy(x => x.Date).ToDictionary(x => x.Key,
+            x => (IReadOnlyList<GarminExportStepDto>)x.Select(day => new GarminExportStepDto(day.Steps,
+                day.DistanceMeters, day.StepLengthCm, day.IsDistanceEstimated)).ToList());
+        var activitiesByDate = rawActivities.GroupBy(x => x.Date).ToDictionary(x => x.Key,
+            x => (IReadOnlyList<GarminExportActivityDto>)x.Select(activity => new GarminExportActivityDto(
+                activity.Name, activity.Sport, activity.StartedAtUtc, activity.DurationSeconds, activity.DistanceMeters,
+                activity.CaloriesKcal, activity.AverageHeartRate, activity.Repetitions, activity.Sets, activity.VolumeKg,
+                JsonSerializer.Deserialize<List<ExerciseDto>>(activity.ExercisesJson, RouteCatalog.Json) ?? [])).ToList());
+        var documentsByDate = rawDocuments.GroupBy(x => x.Date).ToDictionary(x => x.Key,
+            x => (IReadOnlyList<GarminExportHealthRecordDto>)x.Select(document => new GarminExportHealthRecordDto(
+                document.Dataset, JsonSerializer.Deserialize<JsonElement>(document.PayloadJson))).ToList());
+        var days = Enumerable.Range(0, end.DayNumber - start.DayNumber + 1).Select(offset =>
+        {
+            var date = start.AddDays(offset);
+            return new GarminExportDayDto(date,
+                stepsByDate.GetValueOrDefault(date, []), activitiesByDate.GetValueOrDefault(date, []),
+                documentsByDate.GetValueOrDefault(date, []));
+        }).ToList();
+
+        return new GarminDataExportDto(1, clock.GetUtcNow(), kind, start, end, selected.Select(x => x.Id).ToArray(),
+            selected.Where(x => x.Sensitive).Select(x => x.Id).ToArray(),
+            new GarminExportPrivacyDto(IncludesCredentials: false, IncludesOriginalActivityFiles: false, IncludesGpsTracks: false), days);
+    }
     public async Task<IReadOnlyList<ChallengeDto>> ChallengesAsync(string kind, CancellationToken ct)
     {
         var profile = await ProfileAsync(kind, ct);

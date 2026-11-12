@@ -10,7 +10,7 @@ using TrailQuest.Api.Infrastructure.Persistence;
 namespace TrailQuest.Api.Controllers;
 
 [ApiController, Authorize, Route("api/v1/profiles/{profileId}")]
-public sealed class HealthController(HealthService health, TrailQuestDbContext db) : ControllerBase
+public sealed class HealthController(HealthService health, TrailQuestDbContext db, ExportCoordinator exports, CurrentUser current) : ControllerBase
 {
     [HttpGet("health")]
     public Task<HealthOverviewDto> Overview(string profileId, DateOnly? startDate, DateOnly? endDate, CancellationToken ct) => health.OverviewAsync(profileId, startDate, endDate, ct);
@@ -18,6 +18,16 @@ public sealed class HealthController(HealthService health, TrailQuestDbContext d
     public Task<ActivityDetailDto> Activity(string profileId, long id, CancellationToken ct) => health.DetailAsync(profileId, id, ct);
     [HttpGet("health/documents/{dataset}")]
     public Task<IReadOnlyList<RawDocumentDto>> Documents(string profileId, string dataset, CancellationToken ct, [FromQuery] int limit = 31) => health.DocumentsAsync(profileId, dataset, ct, limit);
+    [HttpGet("health/export"), EnableRateLimiting("export")]
+    public async Task<GarminDataExportDto> ExportGarmin(string profileId, [FromQuery] DateOnly startDate,
+        [FromQuery] DateOnly endDate, [FromQuery] string[]? datasets, CancellationToken ct)
+    {
+        using var lease = exports.Enter(current.Id);
+        var result = await health.ExportGarminDataAsync(profileId, startDate, endDate, datasets, ct);
+        Response.Headers["X-TrailQuest-Export-Range"] = $"{startDate:yyyy-MM-dd}/{endDate:yyyy-MM-dd}";
+        Response.Headers.ContentDisposition = $"attachment; filename=\"trailquest-garmin-{startDate:yyyy-MM-dd}-{endDate:yyyy-MM-dd}.json\"";
+        return result;
+    }
     [HttpGet("challenges")]
     public Task<IReadOnlyList<ChallengeDto>> Challenges(string profileId, CancellationToken ct) => health.ChallengesAsync(profileId, ct);
     [HttpPost("activities/import"), EnableRateLimiting("garmin"), RequestSizeLimit(ActivityFileReader.MaximumBytes + 65536), RequestFormLimits(MultipartBodyLengthLimit = ActivityFileReader.MaximumBytes)]

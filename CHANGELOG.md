@@ -16,4 +16,6 @@ Optional `Hosting:LanHttpOrigin` lets the HTTPS domain and private-IP HTTP coexi
 
 Updated the pinned ASP.NET runtime base to the .NET 10.0.15 November security release for CVE-2026-114146, CVE-2026-114147 and CVE-2026-114149; the SDK and Ubuntu package pins remain unchanged.
 
+Added an authenticated, date- and dataset-filtered Garmin JSON export, grouped by day and bounded by existing archive limits. It excludes credentials, original activity files and GPS tracks.
+
 Migrations preserve activity, history, original start dates and stamps. See [release notes](RELEASE_NOTES.md) and [CasaOS upgrade/recovery](docs/CASAOS.md) for compatibility and operator checks.

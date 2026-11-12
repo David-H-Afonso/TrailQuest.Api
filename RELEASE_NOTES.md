@@ -9,6 +9,7 @@ Private activity archive and walking adventures, packaged as independent API and
 - Explicit private-LAN HTTP opt-in with private-IP/client validation, a separate HttpOnly/Strict cookie and dedicated private proxy CIDRs for dynamic Docker addresses. HTTPS remains the default and is required for Internet access; LAN mode requires a new compatible API image.
 - Simultaneous HTTPS-domain and LAN HTTP through optional `Hosting:LanHttpOrigin`, transport-specific cookies and persistent Compose settings. No schema or key-purpose change is required.
 - ASP.NET Core runtime base pinned to the patched .NET 10.0.15 release for the November 2026 framework advisories.
+- Authenticated Garmin JSON export by date range and selected datasets, with sensitive data opt-in and no GPS/original-file export.
 - Walking adventures, manual Garmin archives, FIT/GPX/TCX/ZIP activities, recorded strength, private sharing and revocable application read grants retained.
 - Optional examples disabled by default; personal profiles, history, start dates and earned stamps are preserved.
 - One active passport per profile, explicit leave/switch/resume and preserved inactive progress. Upgrades keep the oldest enrollment active and archive the others without deleting history or stamps.
