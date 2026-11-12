@@ -16,7 +16,9 @@ jobs:
       - name: Test image scanner wrapper
         run: bash scripts/test-scan-image.sh
       - name: Test build mirror resolution
-        run: bash scripts/test-resolve-build-hosts.sh
+        run: |
+          bash scripts/test-resolve-build-hosts.sh
+          node --test scripts/resolve-build-hosts-https.test.mjs
       - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
         with: {global-json-file: global.json}
       - run: bash scripts/check.sh
